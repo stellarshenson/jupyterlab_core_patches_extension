@@ -74,7 +74,12 @@ async function openDocument(
 ): Promise<void> {
   await page.evaluate(async (target: string) => {
     const app = (window as any).jupyterapp;
-    await app.commands.execute('docmanager:open', { path: target });
+    // The factory is explicit because docmanager:open without one may pick the
+    // markdown editor and never render the body, as happened in CI.
+    await app.commands.execute('docmanager:open', {
+      path: target,
+      factory: 'Markdown Preview'
+    });
   }, path);
 }
 
