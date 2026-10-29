@@ -1,0 +1,74 @@
+{
+  "title": "Core patches",
+  "description": "One switch per Stellars core patch. Every patch applies by default. A switch change applies on the next page reload.",
+  "type": "object",
+  "properties": {
+    "jupyterlab_change_ui_font_size_fix": {
+      "type": "boolean",
+      "title": "UI font size alignment",
+      "description": "Scale file browser icons with the UI font size and keep item text aligned with its icon.",
+      "default": true
+    },
+    "jupyterlab_file_browser_column_width_fix": {
+      "type": "boolean",
+      "title": "File browser column width",
+      "description": "Recover stale cached file browser column widths before the stock clamp turns them negative.",
+      "default": true
+    },
+    "jupyterlab_jump_to_definition_fix": {
+      "type": "boolean",
+      "title": "Jump to definition",
+      "description": "Open the definition in the current notebook through Jedi instead of rebuilding the source view.",
+      "default": true
+    },
+    "jupyterlab_markdown_switch_tab_scrolling_fix": {
+      "type": "boolean",
+      "title": "Markdown tab scrolling",
+      "description": "Keep the scroll position when switching tabs while images are still loading.",
+      "default": true
+    },
+    "jupyterlab_markdown_syntax_rendering_fix": {
+      "type": "boolean",
+      "title": "Markdown syntax rendering",
+      "description": "Apply syntax colours to fenced code blocks in rendered Markdown.",
+      "default": true
+    },
+    "jupyterlab_markdown_viewer_toc_fix": {
+      "type": "boolean",
+      "title": "Markdown viewer table of contents",
+      "description": "Make table of contents anchors work in the Markdown Viewer.",
+      "default": true
+    },
+    "jupyterlab_other_file_type_menu_fix": {
+      "type": "boolean",
+      "title": "Other file type menu",
+      "description": "Offer a context menu for file types with no registered viewer and avoid the LSP mimeTypes crash.",
+      "default": true
+    },
+    "jupyterlab_restore_terminals_fix": {
+      "type": "boolean",
+      "title": "Restore terminals",
+      "description": "Restore terminal working directories after a workspace restore.",
+      "default": true
+    },
+    "jupyterlab_server_proxy_launcher_fix": {
+      "type": "boolean",
+      "title": "Server proxy launcher icons",
+      "description": "Render SVG icons of server-proxy launchers in custom categories.",
+      "default": true
+    },
+    "jupyterlab_terminal_cpr_escape_fix": {
+      "type": "boolean",
+      "title": "Terminal CPR escape",
+      "description": "Filter CPR escape text from idle terminal output.",
+      "default": true
+    },
+    "redrawBackgroundTerminals": {
+      "type": "boolean",
+      "title": "Redraw background terminals",
+      "description": "Redraw a background terminal at its real size when its tab is first shown. Applies only when the terminal CPR patch is on.",
+      "default": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,502 @@
+"""Persist terminal working folders and re-create saved terminals at startup.
+
+The frontend reports the terminals held in its layout. The server resolves
+each terminal's folder from the process tree under its pty, stores it, and
+re-creates the saved terminals at the next startup before any browser
+connects. The stock workspace restore then attaches to an already-running
+session in its saved folder. The route paths stay those of the package this
+patch replaces.
+"""
+
+import asyncio
+import hashlib
+import json
+import os
+import subprocess
+import sys
+
+from jupyter_core.paths import jupyter_data_dir
+from jupyter_server.base.handlers import APIHandler
+from jupyter_server.utils import url_path_join
+import tornado
+
+from jupyterlab_core_patches_extension.settings import patch_enabled
+
+# The settings key that switches this patch on and off.
+SWITCH_KEY = "jupyterlab_restore_terminals_fix"
+
+KNOWN_SHELLS = {'bash', 'zsh', 'fish', 'sh', 'dash', 'ksh', 'tcsh', 'csh'}
+
+
+def _get_process_comm(pid: int) -> str | None:
+    try:
+        if sys.platform == "linux":
+            comm_file = f"/proc/{pid}/comm"
+            if os.path.exists(comm_file):
+                with open(comm_file, "r") as f:
+                    return f.read().strip()
+        else:
+            result = subprocess.run(
+                ["ps", "-p", str(pid), "-o", "comm="],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return os.path.basename(result.stdout.strip())
+    except Exception:
+        pass
+    return None
+
+
+def _get_direct_children(parent_pid: int) -> list[int]:
+    children = []
+    try:
+        if sys.platform == "linux":
+            # Each thread's file lists only the children that thread forked
+            task_dir = f"/proc/{parent_pid}/task"
+            for tid in os.listdir(task_dir):
+                try:
+                    with open(f"{task_dir}/{tid}/children", "r") as f:
+                        tokens = f.read().split()
+                except OSError:
+                    continue
+                for child in tokens:
+                    try:
+                        children.append(int(child))
+                    except ValueError:
+                        pass
+        else:
+            result = subprocess.run(
+                ["pgrep", "-P", str(parent_pid)],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                for pid_str in result.stdout.strip().split("\n"):
+                    try:
+                        children.append(int(pid_str))
+                    except ValueError:
+                        pass
+    except Exception:
+        pass
+    return list(dict.fromkeys(children))
+
+
+def _collect_process_tree(pid: int, depth: int, results: list) -> None:
+    comm = _get_process_comm(pid)
+    is_shell = comm in KNOWN_SHELLS if comm else False
+    results.append((pid, depth, is_shell, comm))
+
+    for child_pid in _get_direct_children(pid):
+        _collect_process_tree(child_pid, depth + 1, results)
+
+
+def _is_valid_cwd(path: str) -> bool:
+    if not path or not path.startswith('/'):
+        return False
+    if path.startswith(('/proc/', '/sys/', '/dev/')):
+        return False
+    return os.path.isdir(path)
+
+
+def _get_cwd_linux(pid: int) -> str | None:
+    try:
+        cwd_link = f"/proc/{pid}/cwd"
+        if os.path.exists(cwd_link):
+            return os.readlink(cwd_link)
+    except (OSError, PermissionError):
+        pass
+    return None
+
+
+def _get_pwd_from_environ(pid: int) -> str | None:
+    try:
+        environ_file = f"/proc/{pid}/environ"
+        if os.path.exists(environ_file):
+            with open(environ_file, "rb") as f:
+                environ_data = f.read()
+                for entry in environ_data.split(b"\x00"):
+                    if entry.startswith(b"PWD="):
+                        return entry[4:].decode("utf-8", errors="replace")
+    except (OSError, PermissionError):
+        pass
+    return None
+
+
+def _get_cwd_macos(pid: int) -> str | None:
+    try:
+        result = subprocess.run(
+            ["lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            for line in result.stdout.split("\n"):
+                if line.startswith("n"):
+                    return line[1:]
+    except Exception:
+        pass
+    return None
+
+
+def _try_get_cwd(pid: int) -> str | None:
+    if sys.platform == "linux":
+        cwd = _get_cwd_linux(pid)
+        if cwd is None:
+            cwd = _get_pwd_from_environ(pid)
+        return cwd
+    elif sys.platform == "darwin":
+        return _get_cwd_macos(pid)
+    else:
+        cwd = _get_cwd_linux(pid)
+        if cwd is None:
+            cwd = _get_pwd_from_environ(pid)
+        return cwd
+
+
+def _get_process_cwd(pid: int) -> str | None:
+    all_processes = []
+    _collect_process_tree(pid, 0, all_processes)
+    all_processes.sort(key=lambda x: (-x[1], not x[2]))
+
+    for target_pid, depth, is_shell, comm in all_processes:
+        cwd = _try_get_cwd(target_pid)
+        if cwd and _is_valid_cwd(cwd):
+            return cwd
+
+    return _try_get_cwd(pid)
+
+
+def _to_relative_cwd(cwd: str, server_root: str | None) -> str | None:
+    """Express cwd relative to the server root.
+
+    The built-in terminal:create-new command runs the stored cwd through
+    contents.localPath() which strips the leading slash of an absolute
+    path, so an absolute cwd ends up double-prefixed with the server root
+    and the terminal silently opens at root. A path already relative to
+    the server root survives that round-trip. Returns None when cwd is
+    the root itself (nothing to restore) or lives outside the root
+    (cannot be expressed relative to it).
+    """
+    if not server_root:
+        return None
+    root = os.path.realpath(os.path.expanduser(server_root))
+    target = os.path.realpath(cwd)
+    if target == root:
+        return None
+    rel = os.path.relpath(target, root)
+    if rel.startswith(".."):
+        return None
+    return rel
+
+
+async def _get_terminal_cwd(
+    terminal_manager, terminal_name: str, server_root: str | None = None
+) -> dict:
+    # Check if terminal exists without auto-creating it
+    if terminal_name not in terminal_manager.terminals:
+        return {"terminal_name": terminal_name, "error": "not found"}
+
+    terminal = terminal_manager.terminals[terminal_name]
+    ptyproc = getattr(terminal, "ptyproc", None)
+    if ptyproc is None:
+        return {"terminal_name": terminal_name, "error": "no process"}
+
+    cwd = await asyncio.get_running_loop().run_in_executor(
+        None, _get_process_cwd, ptyproc.pid
+    )
+    if cwd is None:
+        return {"terminal_name": terminal_name, "error": "cwd unavailable"}
+
+    result = {"terminal_name": terminal_name, "cwd": cwd}
+    relative = _to_relative_cwd(cwd, server_root)
+    if relative is not None:
+        result["relative_cwd"] = relative
+    return result
+
+
+class TerminalCwdHandler(APIHandler):
+    """Report the working folder of one running terminal."""
+
+    @tornado.web.authenticated
+    async def get(self, terminal_name: str):
+        """Resolve the terminal's folder from its process tree.
+
+        Args:
+            terminal_name: The terminal name from the route path
+        """
+        terminal_manager = self.settings.get("terminal_manager")
+        if terminal_manager is None:
+            self.set_status(503)
+            self.finish(json.dumps({"error": "Terminal service not available"}))
+            return
+
+        server_root = self.settings.get("server_root_dir")
+        result = await _get_terminal_cwd(
+            terminal_manager, terminal_name, server_root
+        )
+        if "error" in result:
+            self.set_status(404 if result["error"] == "not found" else 500)
+        self.finish(json.dumps(result))
+
+
+class AllTerminalCwdsHandler(APIHandler):
+    """Report the working folders of every running terminal."""
+
+    @tornado.web.authenticated
+    async def get(self):
+        """Resolve every terminal's folder from its process tree."""
+        terminal_manager = self.settings.get("terminal_manager")
+        if terminal_manager is None:
+            self.set_status(503)
+            self.finish(json.dumps({"error": "Terminal service not available"}))
+            return
+
+        server_root = self.settings.get("server_root_dir")
+        terminals = []
+        for name in list(terminal_manager.terminals.keys()):
+            result = await _get_terminal_cwd(
+                terminal_manager, name, server_root
+            )
+            if "cwd" in result:
+                terminals.append(result)
+
+        self.finish(json.dumps({"terminals": terminals}))
+
+
+def _state_file(server_root: str | None) -> str:
+    """Path to the persisted terminal-cwd state for this server root.
+
+    Keyed by a hash of the server root so distinct roots do not clobber
+    each other's terminal state.
+    """
+    root = os.path.realpath(os.path.expanduser(server_root or ""))
+    digest = hashlib.sha1(root.encode("utf-8")).hexdigest()[:12]
+    base = os.path.join(jupyter_data_dir(), "restore_terminals_fix")
+    os.makedirs(base, exist_ok=True)
+    return os.path.join(base, f"state-{digest}.json")
+
+
+def _load_state(server_root: str | None) -> dict:
+    path = _state_file(server_root)
+    try:
+        with open(path, "r") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except (OSError, ValueError):
+        pass
+    return {}
+
+
+def _save_state(server_root: str | None, state: dict) -> None:
+    path = _state_file(server_root)
+    try:
+        tmp = path + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(state, f)
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
+def _workspace_terminal_names(workspaces_dir: str | None) -> set[str]:
+    """Names of the terminals held in the layout of any saved workspace."""
+    names = set()
+    try:
+        entries = os.listdir(workspaces_dir) if workspaces_dir else []
+    except OSError:
+        return names
+    for entry in entries:
+        if not entry.endswith(".jupyterlab-workspace"):
+            continue
+        try:
+            with open(os.path.join(workspaces_dir, entry), "r") as f:
+                workspace = json.load(f)
+        except (OSError, ValueError):
+            continue
+        data = workspace.get("data") if isinstance(workspace, dict) else None
+        if not isinstance(data, dict):
+            continue
+        for key in data:
+            if key.startswith("terminal:"):
+                names.add(key[len("terminal:"):])
+    return names
+
+
+def _workspaces_dir(server_app) -> str | None:
+    """The saved-workspaces folder of the loaded JupyterLab, else its default."""
+    # All extensions are linked (configured) before any is loaded
+    if server_app is not None:
+        lab_apps = server_app.extension_manager.extension_apps.get(
+            "jupyterlab", set()
+        )
+        for app in lab_apps:
+            if getattr(app, "workspaces_dir", None):
+                return app.workspaces_dir
+    try:
+        from jupyterlab.commands import get_workspaces_dir
+    except ImportError:
+        return None
+    return get_workspaces_dir()
+
+
+def _prepopulate_terminals(server_app) -> None:
+    """Re-create saved terminals on server startup.
+
+    Runs before any frontend connects, so the built-in restore's
+    `terminal:create-new {name}` finds each session already running (and
+    `connectTo`s it) instead of starting a fresh shell at the root. This
+    is the only point where terminal cwd can be restored race-free - the
+    frontend WidgetTracker rewrites workspace entries with name-only data,
+    so client-side cwd injection cannot survive.
+    """
+    web_app = server_app.web_app
+    terminal_manager = web_app.settings.get("terminal_manager")
+    if terminal_manager is None:
+        return
+    server_root = web_app.settings.get("server_root_dir")
+    state = _load_state(server_root)
+    for name, cwd in state.items():
+        if name in terminal_manager.terminals:
+            continue
+        if not cwd or not os.path.isdir(cwd):
+            continue
+        try:
+            terminal_manager.create(name=name, cwd=cwd)
+            server_app.log.info(
+                "restore_terminals_fix: pre-created terminal %s at %s",
+                name,
+                cwd,
+            )
+        except Exception as exc:  # noqa: BLE001
+            server_app.log.warning(
+                "restore_terminals_fix: failed to pre-create %s: %s",
+                name,
+                exc,
+            )
+
+
+def prepopulate(server_app) -> None:
+    """Re-create the saved terminals when the patch switch is on.
+
+    The creation is deferred by one second so the terminals server extension
+    has installed its ``terminal_manager`` into the web application first,
+    because server-extension load order is not guaranteed. It runs before any
+    frontend connects, so the stock workspace restore attaches to the
+    already-running session in its saved folder.
+
+    Args:
+        server_app: The JupyterLab application being started
+    """
+    if not patch_enabled(server_app, SWITCH_KEY):
+        return
+
+    def _deferred():
+        try:
+            _prepopulate_terminals(server_app)
+        except Exception as exc:  # noqa: BLE001
+            server_app.log.warning(
+                "restore_terminals_fix: prepopulate failed: %s", exc
+            )
+
+    try:
+        import tornado.ioloop
+
+        tornado.ioloop.IOLoop.current().call_later(1.0, _deferred)
+    except Exception:  # noqa: BLE001
+        _deferred()
+
+
+class TerminalStateHandler(APIHandler):
+    """Persist the cwds of the terminals the frontend reports as in-layout.
+
+    Body: {"names": ["1", "2", ...]}. The server adds the terminals held in
+    any saved workspace layout, resolves each running terminal's current
+    cwd and stores {name: cwd}, replacing the prior state so closed-tab
+    terminals in no workspace drop off and never get pre-created.
+    """
+
+    @tornado.web.authenticated
+    async def post(self):
+        """Resolve the reported terminals and replace the saved state."""
+        terminal_manager = self.settings.get("terminal_manager")
+        if terminal_manager is None:
+            self.set_status(503)
+            self.finish(json.dumps({"error": "Terminal service not available"}))
+            return
+
+        body = self.get_json_body() or {}
+        names = body.get("names") or []
+        loop = asyncio.get_running_loop()
+        # Terminals in another saved workspace's layout have no open page
+        # to report them, so they would drop off and reopen at the root
+        workspace_names = await loop.run_in_executor(
+            None,
+            _workspace_terminal_names,
+            self.settings.get("restore_terminals_fix_workspaces_dir"),
+        )
+        state = {}
+        server_root = self.settings.get("server_root_dir")
+        previous = _load_state(server_root)
+        for name in dict.fromkeys([*names, *sorted(workspace_names)]):
+            cwd = None
+            terminal = terminal_manager.terminals.get(name)
+            ptyproc = None
+            if terminal is not None:
+                ptyproc = getattr(terminal, "ptyproc", None)
+            if ptyproc is not None:
+                # The /proc walk blocks; on the event loop it stalls every
+                # terminal's I/O. terminal_manager stays on this thread.
+                cwd = await loop.run_in_executor(
+                    None, _get_process_cwd, ptyproc.pid
+                )
+            if cwd and _is_valid_cwd(cwd):
+                state[name] = cwd
+            elif name in workspace_names:
+                # ACC-REOPEN-5: the workspace still holds it, so keep its
+                # last folder even while its process is not running.
+                old = previous.get(name)
+                if isinstance(old, str) and _is_valid_cwd(old):
+                    state[name] = old
+
+        _save_state(server_root, state)
+        self.finish(json.dumps({"saved": state}))
+
+
+def setup_handlers(web_app) -> None:
+    """Register the cwd, cwds and state routes under the source's path.
+
+    The saved-workspaces folder is stored in the web application settings
+    here, because the state handler needs it and the package entry point is
+    composed by the integrator.
+
+    Args:
+        web_app: The Tornado web application of the Jupyter server
+    """
+    web_app.settings["restore_terminals_fix_workspaces_dir"] = _workspaces_dir(
+        web_app.settings.get("serverapp")
+    )
+
+    host_pattern = ".*$"
+    base_url = web_app.settings["base_url"]
+
+    cwd_pattern = url_path_join(
+        base_url, "jupyterlab-restore-terminals-fix", "cwd", "([^/]+)"
+    )
+    cwds_pattern = url_path_join(
+        base_url, "jupyterlab-restore-terminals-fix", "cwds"
+    )
+    state_pattern = url_path_join(
+        base_url, "jupyterlab-restore-terminals-fix", "state"
+    )
+
+    handlers = [
+        (cwd_pattern, TerminalCwdHandler),
+        (cwds_pattern, AllTerminalCwdsHandler),
+        (state_pattern, TerminalStateHandler),
+    ]
+    web_app.add_handlers(host_pattern, handlers)
