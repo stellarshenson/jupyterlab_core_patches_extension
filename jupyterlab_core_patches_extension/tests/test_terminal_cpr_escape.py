@@ -2,9 +2,9 @@
 
 Ported unchanged from the donor package's ``tests/test_handlers.py`` and
 ``tests/test_replay_clear.py``. Only the module import, the settings source
-and the patch entry point differ: the combined module is loaded by name
-because its file keeps the hyphen, and every switch is read through
-``patch_enabled`` instead of the donor's ``DEFAULTS['repaint_on_attach']``.
+and the patch entry point differ: the combined module is loaded by name,
+and every switch is read through ``patch_enabled`` instead of the donor's
+``DEFAULTS['repaint_on_attach']``.
 """
 
 import importlib
@@ -18,7 +18,7 @@ import tornado.ioloop
 from jupyter_server_terminals.handlers import TermSocket
 
 EXT = importlib.import_module(
-    "jupyterlab_core_patches_extension.server.terminal-cpr-escape"
+    "jupyterlab_core_patches_extension.server.terminal_cpr_escape"
 )
 
 filter_terminal_responses = EXT.filter_terminal_responses

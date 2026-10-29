@@ -19,6 +19,13 @@ const SWITCH_KEY = 'jupyterlab_markdown_switch_tab_scrolling_fix';
 const GUARD_SELECTOR = '[data-jp-scroll-guard="active"]';
 
 /**
+ * A 1x1 transparent PNG. The document refers to a real file, so the image
+ * element attaches on its own; the held request keeps it from loading.
+ */
+const ONE_PIXEL_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+/**
  * Set one patch switch through the shared settings registry and reload, so the
  * activation gate reads the new value.
  */
@@ -68,25 +75,27 @@ async function prepareDocuments(
   textPath: string,
   imageName: string
 ): Promise<void> {
-  // Galata starts the file browser in the test folder; the contents API reads
-  // a relative path from the server root, so resolve both documents there.
+  // The contents API reads paths from the server root, while the file browser
+  // opens names from its own directory, so keep both forms of every path.
   const directory = await page.filebrowser.getCurrentDirectory();
   const join = (name: string): string =>
     directory ? `${directory.replace(/\/$/, '')}/${name}` : name;
-  const markdownDocument = join(markdownPath);
-  const textDocument = join(textPath);
 
   const padding = 'Filler paragraph.\n\n'.repeat(20);
   await page.contents.uploadContent(
     `# Scroll guard\n\n${padding}![held](${imageName})\n`,
     'text',
-    markdownDocument
+    join(markdownPath)
   );
-  await page.contents.uploadContent('Plain text.\n', 'text', textDocument);
+  await page.contents.uploadContent('Plain text.\n', 'text', join(textPath));
+  await page.contents.uploadContent(ONE_PIXEL_PNG, 'base64', join(imageName));
 
-  await page.filebrowser.open(markdownDocument);
+  // Navigate explicitly, so the browser is known to be in the directory the
+  // uploads landed in, then open each file by its name in that directory.
+  await page.filebrowser.openDirectory(directory);
+  await page.filebrowser.open(markdownPath);
   await page.locator(`img[src*="${imageName}"]`).waitFor({ state: 'attached' });
-  await page.filebrowser.open(textDocument);
+  await page.filebrowser.open(textPath);
 
   const tab = page.locator('.lm-TabBar-tab', { hasText: markdownPath });
   await tab.click();

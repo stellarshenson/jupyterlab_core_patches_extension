@@ -4,8 +4,7 @@ Every patch module under :mod:`jupyterlab_core_patches_extension.server` may
 export any of three entry points: ``setup_handlers(web_app)`` registers its
 HTTP routes, ``prepopulate(server_app)`` does its startup work, and
 ``patch_term_socket(server_app)`` wraps the terminal websocket handler. The
-module names keep the hyphens of the source packages they replace, so they are
-imported by name rather than by an ``import`` statement.
+modules are discovered and imported by name at runtime.
 """
 
 import importlib

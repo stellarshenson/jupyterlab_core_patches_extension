@@ -35,9 +35,9 @@ The patch replaces the `lsp:jump-to-definition` action in Python notebooks with 
 | `installLspCommandOverride` | `src/fixes/jump-to-definition/override.ts`                       | Captures and re-registers the stock command once per application                     |
 | `overrideLSPCommand`        | `src/fixes/jump-to-definition/override.ts`                       | The capture step, guarded by `lspCommandOverridden`                                  |
 | `requestAPI`                | `src/fixes/jump-to-definition/request.ts`                        | Calls the server route and parses the JSON response                                  |
-| `INTROSPECTION_CODE`        | `jupyterlab_core_patches_extension/server/jump-to-definition.py` | The Jedi template executed in the kernel                                             |
-| `IntrospectionCodeHandler`  | `jupyterlab_core_patches_extension/server/jump-to-definition.py` | Serves the template at the route                                                     |
-| `setup_handlers`            | `jupyterlab_core_patches_extension/server/jump-to-definition.py` | Registers the route with the server                                                  |
+| `INTROSPECTION_CODE`        | `jupyterlab_core_patches_extension/server/jump_to_definition.py` | The Jedi template executed in the kernel                                             |
+| `IntrospectionCodeHandler`  | `jupyterlab_core_patches_extension/server/jump_to_definition.py` | Serves the template at the route                                                     |
+| `setup_handlers`            | `jupyterlab_core_patches_extension/server/jump_to_definition.py` | Registers the route with the server                                                  |
 
 ## Server route
 

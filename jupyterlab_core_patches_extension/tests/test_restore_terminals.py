@@ -15,7 +15,7 @@ import pytest
 from jupyter_core.paths import jupyter_data_dir
 
 routes = importlib.import_module(
-    "jupyterlab_core_patches_extension.server.restore-terminals"
+    "jupyterlab_core_patches_extension.server.restore_terminals"
 )
 
 # The startup timer resolves this name on the module when it fires. Capture

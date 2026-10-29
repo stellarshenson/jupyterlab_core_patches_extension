@@ -53,27 +53,27 @@ The frontend reports the names of the terminals with an open tab to the server e
 | `OPEN_REPORT_DELAYS_MS`     | `src/fixes/restore-terminals.ts`                                | Report delays after a terminal opens, 2 s and 5 s                    |
 | `reportLayoutTerminals`     | `src/fixes/restore-terminals.ts`                                | Collects the tracker's terminal names and posts them                 |
 | `requestAPI`                | `src/fixes/restore-terminals/request.ts`                        | Calls a route under the `jupyterlab-restore-terminals-fix` namespace |
-| `SWITCH_KEY`                | `jupyterlab_core_patches_extension/server/restore-terminals.py` | The settings key the server gate reads                               |
-| `KNOWN_SHELLS`              | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Shell names preferred at equal process depth                         |
-| `TerminalCwdHandler`        | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Serves the folder of one terminal                                    |
-| `AllTerminalCwdsHandler`    | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Serves the folders of every running terminal                         |
-| `TerminalStateHandler`      | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Resolves the reported terminals and replaces the saved state         |
-| `setup_handlers`            | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Stores the workspaces folder and registers the three routes          |
-| `prepopulate`               | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Reads the switch and schedules the startup re-creation               |
-| `_prepopulate_terminals`    | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Creates each saved terminal that is not running                      |
-| `_workspaces_dir`           | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Finds the LabApp workspaces folder or its default                    |
-| `_get_process_comm`         | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Reads one process's command name                                     |
-| `_get_direct_children`      | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Lists the direct children of a process, including thread forks       |
-| `_collect_process_tree`     | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Walks the process tree with depth and shell flags                    |
-| `_is_valid_cwd`             | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Rejects empty, relative and pseudo-filesystem folders                |
-| `_get_cwd_linux`            | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Reads a folder from `/proc/<pid>/cwd`                                |
-| `_get_pwd_from_environ`     | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Reads `PWD` from `/proc/<pid>/environ`                               |
-| `_get_cwd_macos`            | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Reads a folder with `lsof`                                           |
-| `_try_get_cwd`              | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Picks the platform-specific folder lookup                            |
-| `_get_process_cwd`          | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Returns the deepest valid folder in the tree                         |
-| `_to_relative_cwd`          | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Expresses a folder relative to the server root                       |
-| `_get_terminal_cwd`         | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Builds the folder record of one terminal                             |
-| `_state_file`               | `jupyterlab_core_patches_extension/server/restore-terminals.py` | The state path for one server root                                   |
-| `_load_state`               | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Reads the saved state, empty on any failure                          |
-| `_save_state`               | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Writes the state atomically                                          |
-| `_workspace_terminal_names` | `jupyterlab_core_patches_extension/server/restore-terminals.py` | Reads terminal names from the saved workspace files                  |
+| `SWITCH_KEY`                | `jupyterlab_core_patches_extension/server/restore_terminals.py` | The settings key the server gate reads                               |
+| `KNOWN_SHELLS`              | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Shell names preferred at equal process depth                         |
+| `TerminalCwdHandler`        | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Serves the folder of one terminal                                    |
+| `AllTerminalCwdsHandler`    | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Serves the folders of every running terminal                         |
+| `TerminalStateHandler`      | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Resolves the reported terminals and replaces the saved state         |
+| `setup_handlers`            | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Stores the workspaces folder and registers the three routes          |
+| `prepopulate`               | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Reads the switch and schedules the startup re-creation               |
+| `_prepopulate_terminals`    | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Creates each saved terminal that is not running                      |
+| `_workspaces_dir`           | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Finds the LabApp workspaces folder or its default                    |
+| `_get_process_comm`         | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Reads one process's command name                                     |
+| `_get_direct_children`      | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Lists the direct children of a process, including thread forks       |
+| `_collect_process_tree`     | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Walks the process tree with depth and shell flags                    |
+| `_is_valid_cwd`             | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Rejects empty, relative and pseudo-filesystem folders                |
+| `_get_cwd_linux`            | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Reads a folder from `/proc/<pid>/cwd`                                |
+| `_get_pwd_from_environ`     | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Reads `PWD` from `/proc/<pid>/environ`                               |
+| `_get_cwd_macos`            | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Reads a folder with `lsof`                                           |
+| `_try_get_cwd`              | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Picks the platform-specific folder lookup                            |
+| `_get_process_cwd`          | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Returns the deepest valid folder in the tree                         |
+| `_to_relative_cwd`          | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Expresses a folder relative to the server root                       |
+| `_get_terminal_cwd`         | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Builds the folder record of one terminal                             |
+| `_state_file`               | `jupyterlab_core_patches_extension/server/restore_terminals.py` | The state path for one server root                                   |
+| `_load_state`               | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Reads the saved state, empty on any failure                          |
+| `_save_state`               | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Writes the state atomically                                          |
+| `_workspace_terminal_names` | `jupyterlab_core_patches_extension/server/restore_terminals.py` | Reads terminal names from the saved workspace files                  |
