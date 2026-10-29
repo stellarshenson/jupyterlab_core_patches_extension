@@ -30,7 +30,7 @@ JupyterLab's HTML sanitizer removes `id` attributes when `allowNamedProperties` 
 - **CSS** - none; the source stylesheet holds only the scaffold comment, so the port adds no stylesheet and no body class
 - **Double patch** - the source has no guard and the patch is not idempotent: a second activation wraps the prototype and connects the tracker signals again. The port adds the window marker before the first patch
 - **Debug logger** - the source's `logDocumentHeaders` has a fully commented body and is not ported; its 50 ms timer ran no code
-- **Settings source** - the source read its own plugin schema; this port reads `jupyterlab_core_patches_extension:plugin` through `isPatchEnabled`
+- **Settings source** - the source read its own plugin schema; this port reads `jupyterlab-core-patches-extension:plugin` through `isPatchEnabled`
 
 ## Members
 

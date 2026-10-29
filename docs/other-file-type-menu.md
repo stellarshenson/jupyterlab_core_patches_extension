@@ -45,7 +45,7 @@ Icon extensions such as vscode-icons register file types with patterns but witho
 - **Server part** - none; the source `jupyterlab_other_file_type_menu_fix/__init__.py` only declares the labextension path
 - **Scaffold removed** - the source Jest test held a `1 + 1` placeholder; the port replaces it with the tests below
 - **CSS** - the source `style/base.css` holds only a comment, so the patch adds no stylesheet and no body class
-- **Settings source** - the source read no settings; the port gates on the shared `jupyterlab_core_patches_extension:plugin` schema through `isPatchEnabled`
+- **Settings source** - the source read no settings; the port gates on the shared `jupyterlab-core-patches-extension:plugin` schema through `isPatchEnabled`
 - **Double registration** - a still-installed old package adds a second listener and repeats the mime type assignment; both effects are idempotent, so the visible result is unchanged
 
 ## Test approach

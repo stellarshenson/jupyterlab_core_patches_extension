@@ -20,7 +20,7 @@ PATCH_KEYS = [
 
 def test_labextension_paths():
     assert extension._jupyter_labextension_paths() == [
-        {"src": "labextension", "dest": "jupyterlab_core_patches_extension"}
+        {"src": "labextension", "dest": "jupyterlab-core-patches-extension"}
     ]
 
 

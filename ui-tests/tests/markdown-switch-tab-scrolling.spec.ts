@@ -38,7 +38,7 @@ async function setSwitch(
     async ({ key, value }: { key: string; value: boolean }) => {
       const app = (window as any).jupyterapp;
       const manager = app.serviceManager.settings;
-      const id = 'jupyterlab_core_patches_extension:plugin';
+      const id = 'jupyterlab-core-patches-extension:plugin';
       const plugin = await manager.fetch(id);
       const raw = JSON.parse(plugin.raw || '{}');
       raw[key] = value;

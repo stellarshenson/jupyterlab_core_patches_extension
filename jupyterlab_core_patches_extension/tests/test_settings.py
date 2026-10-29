@@ -7,7 +7,7 @@ KEY = "jupyterlab_change_ui_font_size_fix"
 
 
 def _write_settings(tmp_path, data):
-    path = tmp_path / "jupyterlab_core_patches_extension" / "plugin.jupyterlab-settings"
+    path = tmp_path / "jupyterlab-core-patches-extension" / "plugin.jupyterlab-settings"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data), encoding="utf-8")
     return path

@@ -26,7 +26,7 @@ The stock `DirListing` trusts its cached `_width` when it clamps column sizes. A
 - **Scaffold removed** - the source's `hello` route and `src/request.ts` are not ported
 - **CSS** - the source has no CSS, so the patch adds no body class and no stylesheet
 - **Settings source** - the source read its own plugin schema
-- **Shared switch** - this port reads `jupyterlab_core_patches_extension:plugin` through `isPatchEnabled`
+- **Shared switch** - this port reads `jupyterlab-core-patches-extension:plugin` through `isPatchEnabled`
 
 ## Members
 

@@ -7777,9 +7777,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jupyterlab_core_patches_extension@workspace:.":
+"jupyterlab-core-patches-extension@workspace:.":
   version: 0.0.0-use.local
-  resolution: "jupyterlab_core_patches_extension@workspace:."
+  resolution: "jupyterlab-core-patches-extension@workspace:."
   dependencies:
     "@eslint/js": ^9.39.0
     "@jupyter/builder": ^1.2.0

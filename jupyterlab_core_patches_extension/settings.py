@@ -9,7 +9,7 @@ import os
 import threading
 from pathlib import Path
 
-PACKAGE = "jupyterlab_core_patches_extension"
+PACKAGE = "jupyterlab-core-patches-extension"
 
 _CACHE = {}
 _LOCK = threading.Lock()
