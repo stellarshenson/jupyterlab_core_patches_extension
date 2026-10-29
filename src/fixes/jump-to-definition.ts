@@ -134,10 +134,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
         // Replace placeholders
         const jediCode = response.code
-          .replace('__NOTEBOOK_SOURCE__', JSON.stringify(notebookSource))
-          .replace('__CURSOR_LINE__', String(jediLine))
-          .replace('__CURSOR_COLUMN__', String(absoluteColumn))
-          .replace('__NOTEBOOK_PATH__', JSON.stringify(notebookPath));
+          .replace('__CURSOR_LINE__', () => String(jediLine))
+          .replace('__CURSOR_COLUMN__', () => String(absoluteColumn))
+          .replace('__NOTEBOOK_PATH__', () => JSON.stringify(notebookPath))
+          .replace('__NOTEBOOK_SOURCE__', () => JSON.stringify(notebookSource));
 
         // Execute in kernel
         const future = kernel.requestExecute({ code: jediCode });

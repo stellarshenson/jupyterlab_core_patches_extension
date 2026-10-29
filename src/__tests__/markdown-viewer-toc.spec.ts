@@ -158,6 +158,31 @@ describe('fragment lookup', () => {
     );
   });
 
+  it('falls back to the percent-decoded fragment', () => {
+    const node = container('<h2 data-jupyter-id="Wstęp"></h2>');
+    expect(findFragmentTarget(node, '#Wst%C4%99p', false)).toBe(
+      node.querySelector('h2')
+    );
+  });
+
+  it('prefers a literal heading id over its decoded reading', () => {
+    const node = container(
+      '<h2 data-jupyter-id="Why-%20-appears-in-URLs"></h2>'
+    );
+    expect(findFragmentTarget(node, '#Why-%20-appears-in-URLs', false)).toBe(
+      node.querySelector('h2')
+    );
+  });
+
+  it('resolves a literal percent escape before an equivalent decoded heading', () => {
+    const node = container(
+      '<h2 data-jupyter-id="Code-%41"></h2><h2 data-jupyter-id="Code-A"></h2>'
+    );
+    expect(findFragmentTarget(node, '#Code-%41', false)).toBe(
+      node.querySelector('[data-jupyter-id="Code-%41"]')
+    );
+  });
+
   it('matches a lowercase fragment against a title-case heading', () => {
     const node = container(
       '<h2 data-jupyter-id="Performance-Optimization"></h2>'

@@ -21,6 +21,22 @@ export function cleanFragment(fragment: string): string {
 }
 
 /**
+ * The fragment readings to match, literal first and percent-decoded second.
+ *
+ * @param fragment - The fragment, with or without the leading `#`
+ * @returns The literal reading, then the decoded reading when it differs
+ */
+function fragmentCandidates(fragment: string): string[] {
+  const clean = cleanFragment(fragment);
+  try {
+    const decoded = decodeURIComponent(clean);
+    return decoded === clean ? [clean] : [clean, decoded];
+  } catch {
+    return [clean];
+  }
+}
+
+/**
  * The heading attribute that holds the anchor for the given sanitizer setting.
  *
  * @param allowNamedProperties - Whether the sanitizer keeps `id` attributes
@@ -33,8 +49,11 @@ export function anchorAttribute(allowNamedProperties: boolean): string {
 /**
  * Find the element a fragment points at.
  *
- * The first query uses the attribute the sanitizer keeps, the second query
- * uses the other attribute. A final case-insensitive scan of every heading id
+ * The literal fragment is tried first and the percent-decoded form second,
+ * because `window.location.hash` is URL-serialized, so a heading with a
+ * non-ASCII character reads back percent-encoded. For each candidate the
+ * first query uses the attribute the sanitizer keeps, the second query uses
+ * the other attribute. A final case-insensitive scan of every heading id
  * resolves URL fragments that are lowercase against heading ids that keep the
  * heading's title case.
  *
@@ -50,31 +69,38 @@ export function findFragmentTarget(
 ): HTMLElement | null {
   let el: Element | null = null;
   try {
-    const clean = cleanFragment(fragment);
-    const escaped = CSS.escape(clean);
     const attribute = anchorAttribute(allowNamedProperties);
+    for (const clean of fragmentCandidates(fragment)) {
+      const escaped = CSS.escape(clean);
 
-    el = contentNode.querySelector(
-      allowNamedProperties ? `#${escaped}` : `[${attribute}="${escaped}"]`
-    );
-    if (!el) {
       el = contentNode.querySelector(
-        allowNamedProperties ? `[${attribute}="${escaped}"]` : `#${escaped}`
+        allowNamedProperties ? `#${escaped}` : `[${attribute}="${escaped}"]`
       );
-    }
+      if (!el) {
+        el = contentNode.querySelector(
+          allowNamedProperties ? `[${attribute}="${escaped}"]` : `#${escaped}`
+        );
+      }
 
-    if (!el) {
-      const cleanLower = clean.toLowerCase();
-      const headings = contentNode.querySelectorAll('[data-jupyter-id], [id]');
-      for (const heading of Array.from(headings)) {
-        const headingId =
-          heading.getAttribute(NAMED_ID_ATTRIBUTE) ||
-          heading.getAttribute('id') ||
-          '';
-        if (headingId.toLowerCase() === cleanLower) {
-          el = heading;
-          break;
+      if (!el) {
+        const cleanLower = clean.toLowerCase();
+        const headings = contentNode.querySelectorAll(
+          '[data-jupyter-id], [id]'
+        );
+        for (const heading of Array.from(headings)) {
+          const headingId =
+            heading.getAttribute(NAMED_ID_ATTRIBUTE) ||
+            heading.getAttribute('id') ||
+            '';
+          if (headingId.toLowerCase() === cleanLower) {
+            el = heading;
+            break;
+          }
         }
+      }
+
+      if (el) {
+        break;
       }
     }
   } catch (error) {

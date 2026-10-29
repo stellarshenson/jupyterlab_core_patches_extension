@@ -34,20 +34,20 @@ JupyterLab's HTML sanitizer removes `id` attributes when `allowNamedProperties` 
 
 ## Members
 
-| Member                        | Kind              | Purpose                                                                            |
-| ----------------------------- | ----------------- | ---------------------------------------------------------------------------------- |
-| `default`                     | plugin            | Registers the patch under the source plugin id and gates it on the switch          |
-| `PATCH_MARKER`                | exported constant | Window key `__jp_markdown_viewer_toc_fix__` that makes a second activation a no-op |
-| `SWITCH_KEY`                  | constant          | The settings schema key the gate reads                                             |
-| `patchFragmentNavigation`     | helper            | Wraps the `text/html` renderer prototype `setFragment`                             |
-| `scrollToFragment`            | helper            | Finds the fragment target and scrolls it into view                                 |
-| `patchMarkdownViewerFragment` | helper            | Wraps a viewer's `setFragment` and re-applies the hash after a render              |
-| `patchWidgetTOC`              | helper            | Connects a viewer's TOC model to its heading elements                              |
-| `setupTOCNavigation`          | helper            | Patches the existing Markdown Viewer widgets and every widget added later          |
-| `NAMED_ID_ATTRIBUTE`          | exported constant | `data-jupyter-id`, the anchor attribute the sanitizer leaves                       |
-| `cleanFragment`               | exported function | Strips the leading `#` from a fragment                                             |
-| `anchorAttribute`             | exported function | `id` or `data-jupyter-id`, from the sanitizer setting                              |
-| `findFragmentTarget`          | exported function | Primary attribute query, fallback query, then a case-insensitive heading scan      |
+| Member                        | Kind              | Purpose                                                                                             |
+| ----------------------------- | ----------------- | --------------------------------------------------------------------------------------------------- |
+| `default`                     | plugin            | Registers the patch under the source plugin id and gates it on the switch                           |
+| `PATCH_MARKER`                | exported constant | Window key `__jp_markdown_viewer_toc_fix__` that makes a second activation a no-op                  |
+| `SWITCH_KEY`                  | constant          | The settings schema key the gate reads                                                              |
+| `patchFragmentNavigation`     | helper            | Wraps the `text/html` renderer prototype `setFragment`                                              |
+| `scrollToFragment`            | helper            | Finds the fragment target and scrolls it into view                                                  |
+| `patchMarkdownViewerFragment` | helper            | Wraps a viewer's `setFragment` and re-applies the hash after a render                               |
+| `patchWidgetTOC`              | helper            | Connects a viewer's TOC model to its heading elements                                               |
+| `setupTOCNavigation`          | helper            | Patches the existing Markdown Viewer widgets and every widget added later                           |
+| `NAMED_ID_ATTRIBUTE`          | exported constant | `data-jupyter-id`, the anchor attribute the sanitizer leaves                                        |
+| `cleanFragment`               | exported function | Strips the leading `#` from a fragment                                                              |
+| `anchorAttribute`             | exported function | `id` or `data-jupyter-id`, from the sanitizer setting                                               |
+| `findFragmentTarget`          | exported function | literal fragment first, then percent-decoded; attribute queries and a case-insensitive heading scan |
 
 ## Tests
 
