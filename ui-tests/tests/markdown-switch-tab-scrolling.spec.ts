@@ -64,6 +64,21 @@ async function holdImage(
 }
 
 /**
+ * Open one document through the document manager. The command takes a
+ * server-root relative path, so the open does not depend on the state of the
+ * file browser.
+ */
+async function openDocument(
+  page: IJupyterLabPageFixture,
+  path: string
+): Promise<void> {
+  await page.evaluate(async (target: string) => {
+    const app = (window as any).jupyterapp;
+    await app.commands.execute('docmanager:open', { path: target });
+  }, path);
+}
+
+/**
  * Create a Markdown document with the held image and a plain text document,
  * open both, then activate the Markdown tab a second time. The second
  * activation is the one that can guard, because the rendered markdown exists
@@ -75,27 +90,26 @@ async function prepareDocuments(
   textPath: string,
   imageName: string
 ): Promise<void> {
-  // The contents API reads paths from the server root, while the file browser
-  // opens names from its own directory, so keep both forms of every path.
+  // Every path here is server-root relative, which the contents API and the
+  // document manager command both take.
   const directory = await page.filebrowser.getCurrentDirectory();
   const join = (name: string): string =>
     directory ? `${directory.replace(/\/$/, '')}/${name}` : name;
+  const markdownDocument = join(markdownPath);
+  const textDocument = join(textPath);
 
   const padding = 'Filler paragraph.\n\n'.repeat(20);
   await page.contents.uploadContent(
     `# Scroll guard\n\n${padding}![held](${imageName})\n`,
     'text',
-    join(markdownPath)
+    markdownDocument
   );
-  await page.contents.uploadContent('Plain text.\n', 'text', join(textPath));
+  await page.contents.uploadContent('Plain text.\n', 'text', textDocument);
   await page.contents.uploadContent(ONE_PIXEL_PNG, 'base64', join(imageName));
 
-  // Navigate explicitly, so the browser is known to be in the directory the
-  // uploads landed in, then open each file by its name in that directory.
-  await page.filebrowser.openDirectory(directory);
-  await page.filebrowser.open(markdownPath);
+  await openDocument(page, markdownDocument);
   await page.locator(`img[src*="${imageName}"]`).waitFor({ state: 'attached' });
-  await page.filebrowser.open(textPath);
+  await openDocument(page, textDocument);
 
   const tab = page.locator('.lm-TabBar-tab', { hasText: markdownPath });
   await tab.click();
