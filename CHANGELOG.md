@@ -2,6 +2,13 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.10] - 2026-10-30
+
+### Changed
+
+- The README opens on the ten core patches and the problems they solve; the Features table names each patch's symptom and the mechanism that fixes it, taken from each patch's page
+- The consolidation diagram moves out of the opening into a `## Why one extension` section after the Features table, with no edge labels because Mermaid draws them on a fixed pale box that fails in JupyterLab Dark
+
 ## [1.0.9] - 2026-10-30
 
 ### Changed
