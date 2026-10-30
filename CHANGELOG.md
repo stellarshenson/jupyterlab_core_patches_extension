@@ -2,6 +2,17 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.12] - 2026-10-30
+
+### Changed
+
+- The terminal-CPR patch no longer clears the screen before replaying a session buffer or reconnects the xterm at a terminal's first show; it holds the size until the xterm opens, then steps the PTY one column narrower and back once so the running program repaints at the fitted size
+- The response filter also removes the DSR answer, the XTWINOPS size reports, DECRQSS replies, kitty keyboard reports and the private CPR form, and a replay strips every query when one shell alone sits at the prompt
+
+### Fixed
+
+- Terminals running Claude Code and other full-screen programs no longer show a scrambled TUI, raw escape text, a blank or half screen at first show, or the wrong width
+
 ## [1.0.11] - 2026-10-30
 
 ### Changed
