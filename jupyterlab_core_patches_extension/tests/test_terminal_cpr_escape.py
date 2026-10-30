@@ -1,12 +1,14 @@
 """Server tests for the terminal CPR escape patch.
 
-Ported unchanged from the donor package's ``tests/test_handlers.py`` and
+Adapted from the donor package's ``tests/test_handlers.py`` and
 ``tests/test_replay_clear.py``. Only the module import, the settings source
 and the patch entry point differ: the combined module is loaded by name,
 and every switch is read through ``patch_enabled`` instead of the donor's
-``DEFAULTS['repaint_on_attach']``.
+``DEFAULTS['repaint_on_attach']``. The clear-before-replay assertions are
+replaced by tests that a replay passes unchanged apart from query stripping.
 """
 
+import contextlib
 import importlib
 import json
 import logging
@@ -23,14 +25,14 @@ EXT = importlib.import_module(
 
 filter_terminal_responses = EXT.filter_terminal_responses
 strip_replay_queries = EXT.strip_replay_queries
-clear_before_replay = EXT.clear_before_replay
 _make_winsize_bounce = EXT._make_winsize_bounce
 _shell_at_prompt = EXT._shell_at_prompt
 _BOUNCE_STEP = EXT._BOUNCE_STEP
 
 # Settings stand-in. The donor suite toggled DEFAULTS['repaint_on_attach'];
-# in the combined package only the four replay defaults stay module constants,
-# and redrawBackgroundTerminals is read through patch_enabled on every attach.
+# in the combined package only the three fixed source defaults stay module
+# constants, and redrawBackgroundTerminals is read through patch_enabled on
+# every attach.
 ENABLED = {EXT.SWITCH_KEY: True, EXT.REDRAW_OPTION: True}
 
 
@@ -78,6 +80,11 @@ class TestFilterEscPrefixed:
         assert result == ''
         assert counts['cpr'] == 1
 
+    def test_filters_private_cpr(self):
+        result, counts, _ = filter_terminal_responses('\x1b[?52;1R')
+        assert result == ''
+        assert counts['cpr'] == 1
+
     def test_filters_da(self):
         result, counts, _ = filter_terminal_responses('\x1b[?1;2c')
         assert result == ''
@@ -92,6 +99,64 @@ class TestFilterEscPrefixed:
         result, counts, _ = filter_terminal_responses('\x1b[?12;2$y')
         assert result == ''
         assert counts['decrpm'] == 1
+
+    def test_filters_dsr_answer(self):
+        """DSR 5 answer: the terminal reports ready with ESC[0n."""
+        result, counts, _ = filter_terminal_responses('\x1b[0n')
+        assert result == ''
+        assert counts['dsr'] == 1
+
+    def test_preserves_nvidia_motd_line(self):
+        """The MOTD line starts with [0] - it must not be taken for a DSR answer."""
+        text = '[0] NVIDIA GeForce RTX 4090, 24564 MiB'
+        result, counts, _ = filter_terminal_responses(text)
+        assert result == text
+        assert sum(counts.values()) == 0
+
+    def test_filters_xtwinops_8(self):
+        """XTWINOPS text-area report: ESC[8;rows;colst."""
+        result, counts, _ = filter_terminal_responses('\x1b[8;52;160t')
+        assert result == ''
+        assert counts['xtwinops'] == 1
+
+    def test_filters_xtwinops_4(self):
+        """XTWINOPS pixel report: ESC[4;height;widtht."""
+        result, counts, _ = filter_terminal_responses('\x1b[4;1040;3200t')
+        assert result == ''
+        assert counts['xtwinops'] == 1
+
+    def test_preserves_cursor_position_near_xtwinops(self):
+        """CUP with the same leading parameter is not an XTWINOPS report."""
+        text = '\x1b[4;1H\x1b[8;5H'
+        result, counts, _ = filter_terminal_responses(text)
+        assert result == text
+        assert sum(counts.values()) == 0
+
+    def test_filters_decrqss_reply(self):
+        """DECRQSS reply: DCS 1 $ r payload ST."""
+        result, counts, _ = filter_terminal_responses('\x1bP1$r0m\x1b\\')
+        assert result == ''
+        assert counts['decrqss'] == 1
+
+    def test_preserves_non_decrqss_dcs(self):
+        """A DCS without the $ r reply marker (here a sixel) is kept."""
+        text = '\x1bPq#0;2;0;0;0\x1b\\'
+        result, counts, _ = filter_terminal_responses(text)
+        assert result == text
+        assert sum(counts.values()) == 0
+
+    def test_filters_kitty_keyboard_report(self):
+        """kitty keyboard report: ESC[?flags u."""
+        result, counts, _ = filter_terminal_responses('\x1b[?1u')
+        assert result == ''
+        assert counts['kitty'] == 1
+
+    def test_preserves_bracketed_paste_near_kitty(self):
+        """A private mode set ends in h/l, never in u."""
+        text = '\x1b[?2004h'
+        result, counts, _ = filter_terminal_responses(text)
+        assert result == text
+        assert sum(counts.values()) == 0
 
     def test_filters_osc10(self):
         result, counts, _ = filter_terminal_responses('\x1b]10;rgb:c3c3/c3c3/c3c3\x1b\\')
@@ -145,6 +210,12 @@ class TestFilterBareSequences:
         assert result == ''
         assert counts['bare_cpr'] == 1
 
+    def test_filters_bare_private_cpr(self):
+        """The private form reaches the filter as [?row;colR once ESC is gone."""
+        result, counts, _ = filter_terminal_responses('[?52;1R')
+        assert result == ''
+        assert counts['bare_cpr'] == 1
+
     def test_filters_multiple_bare_cpr(self):
         result, counts, _ = filter_terminal_responses('[2;2R[3;1R')
         assert result == ''
@@ -159,6 +230,30 @@ class TestFilterBareSequences:
         result, counts, _ = filter_terminal_responses('[>0;276;0c')
         assert result == ''
         assert counts['bare_da2'] == 1
+
+    def test_filters_bare_dsr_answer(self):
+        """Fish strips ESC from the DSR answer, leaving [0n."""
+        result, counts, _ = filter_terminal_responses('[0n')
+        assert result == ''
+        assert counts['bare_dsr'] == 1
+
+    def test_filters_bare_xtwinops(self):
+        """The bare reports keep their params: [8;rows;colst and [4;h;wt."""
+        result, counts, _ = filter_terminal_responses('[8;52;160t[4;1040;3200t')
+        assert result == ''
+        assert counts['bare_xtwinops'] == 2
+
+    def test_filters_bare_decrqss_reply(self):
+        """Fish strips both ESC bytes, leaving P1$r0m\\ as literal text."""
+        result, counts, _ = filter_terminal_responses('P1$r0m\\')
+        assert result == ''
+        assert counts['bare_decrqss'] == 1
+
+    def test_filters_bare_kitty_keyboard_report(self):
+        """The bare kitty report keeps the private marker: [?1u."""
+        result, counts, _ = filter_terminal_responses('[?1u')
+        assert result == ''
+        assert counts['bare_kitty'] == 1
 
     def test_filters_bare_decrpm(self):
         result, counts, _ = filter_terminal_responses('[?12;2$y')
@@ -956,10 +1051,11 @@ class TestWinsizeBounce:
             assert _shell_at_prompt(mock.Mock(fd=7)) is False
 
 
-def _attach(chunks, live=(), **toggles):
+def _attach(chunks, live=(), shell_at_prompt=None, **toggles):
     """Drive the real patch over the real TermSocket.open: attach a socket
     whose terminal holds `chunks` in read_buffer, then feed `live` to the
-    socket as PTY output. Returns the text of every stdout frame sent."""
+    socket as PTY output. Returns the text of every stdout frame sent. With
+    `shell_at_prompt` true, the foreground process group reads as one shell."""
     class FakeTerminal:
         def __init__(self):
             self.clients = []
@@ -989,14 +1085,19 @@ def _attach(chunks, live=(), **toggles):
             self.frames.append(json.loads(message))
 
     repaint = toggles.pop('repaint_on_attach', True)
+    shell_patch = (
+        mock.patch.object(EXT, '_shell_at_prompt', return_value=True)
+        if shell_at_prompt
+        else contextlib.nullcontext()
+    )
     orig_open = TermSocket.open
     orig_read = TermSocket.on_pty_read
     try:
-        # these tests check the replay itself; clear_before_replay has its own tests
-        with mock.patch.dict(EXT.DEFAULTS, {'clear_before_replay': False, **toggles}), \
+        with mock.patch.dict(EXT.DEFAULTS, toggles), \
                 mock.patch.dict(ENABLED, {EXT.REDRAW_OPTION: repaint}), \
                 mock.patch.object(EXT, 'patch_enabled', _patch_enabled), \
-                mock.patch.object(tornado.ioloop.IOLoop, 'current', return_value=FakeLoop()):
+                mock.patch.object(tornado.ioloop.IOLoop, 'current', return_value=FakeLoop()), \
+                shell_patch:
             _install(mock.MagicMock())
             sock = Sock()
             TermSocket.open(sock, '8')
@@ -1052,7 +1153,9 @@ class TestReplayQueryStrip:
 
     def test_strip_removes_only_query_bytes(self):
         """Text, SGR, cursor moves, OSC 0/7/8/52/133, responses and the queries
-        xterm.js does not answer (XTVERSION, XTWINOPS, kitty) are kept."""
+        xterm.js does not answer (XTVERSION, XTWINOPS, kitty) are kept in a
+        replay from a non-shell foreground; at a shell prompt every query is
+        stripped."""
         kept = [
             'plain text\r\n\x1b[32mgreen\x1b[0m\x1b[5A\x1b[10;20H\x1b[K',
             '\x1b]0;title\x07\x1b]7;file:///home/user\x07\x1b]8;;https://example.com\x07link\x1b]8;;\x07',
@@ -1076,6 +1179,17 @@ class TestReplayQueryStrip:
         assert _attach(['\x1b[c', '$ ']) == ['$ ']
         assert _attach(['\x1b[c', '$ ', '\x1b[c']) == ['$ \x1b[c']
 
+    def test_replay_strips_trailing_query_when_shell_at_prompt(self):
+        """One shell alone in the foreground cannot wait for an answer, so a
+        query run that ends the replay is removed too."""
+        assert _attach(['$ ', '\x1b[c'], shell_at_prompt=True) == ['$ ']
+        assert strip_replay_queries('$ \x1b]11;?\x07', at_shell_prompt=True) == '$ '
+
+    def test_replay_keeps_trailing_query_when_not_shell(self):
+        """A foreground program may still wait for the answer."""
+        assert _attach(['$ ', '\x1b[c']) == ['$ \x1b[c']
+        assert strip_replay_queries('$ \x1b]11;?\x07') == '$ \x1b]11;?\x07'
+
     def test_live_query_after_open_unchanged(self):
         """The same bytes are stripped from the replay and reach the client
         byte for byte as live output after open."""
@@ -1093,205 +1207,46 @@ class TestReplayQueryStrip:
         assert _attach(chunks, suppress_buffer_replay=True) == []
 
 
-CLEAR = '\x1b[H\x1b[2J\x1b[3J'
-PREFIX_NO_SWITCH = CLEAR
-PREFIX_ENTRY = '\x1b[?1049l' + CLEAR
-PREFIX_LEAVE = '\x1b[?1049l' + CLEAR + '\x1b[?1049h'
-
-
-class TestClearBeforeReplay:
-    """The pure function: which prefix goes in front of which text."""
-
-    def test_no_switch_clears_only(self):
-        text = 'line1\r\nline2\r\n\x1b[32mgreen\x1b[0m'
-        assert clear_before_replay(text) == PREFIX_NO_SWITCH + text
-
-    def test_empty_text(self):
-        assert clear_before_replay('') == PREFIX_NO_SWITCH
-
-    @pytest.mark.parametrize('mode', ['47', '1047', '1049'])
-    def test_first_switch_entry(self, mode):
-        text = f'history\r\n\x1b[?{mode}hfull screen'
-        assert clear_before_replay(text) == PREFIX_ENTRY + text
-
-    @pytest.mark.parametrize('mode', ['47', '1047', '1049'])
-    def test_first_switch_leave(self, mode):
-        text = f'screen rows\x1b[?{mode}lprompt'
-        assert clear_before_replay(text) == PREFIX_LEAVE + text
-
-    def test_parameter_list_entry(self):
-        text = 'a\x1b[?1049;25hb'
-        assert clear_before_replay(text) == PREFIX_ENTRY + text
-
-    def test_parameter_list_leave(self):
-        text = 'a\x1b[?25;1047lb'
-        assert clear_before_replay(text) == PREFIX_LEAVE + text
-
-    def test_only_first_switch_counts(self):
-        assert clear_before_replay('\x1b[?1049h x \x1b[?1049l') == PREFIX_ENTRY + '\x1b[?1049h x \x1b[?1049l'
-        assert clear_before_replay('\x1b[?1049l x \x1b[?1049h') == PREFIX_LEAVE + '\x1b[?1049l x \x1b[?1049h'
-
-    @pytest.mark.parametrize('sequence', [
-        '\x1b[?2004h',          # bracketed paste
-        '\x1b[?1000h',          # mouse reporting
-        '\x1b[?25l',            # cursor visibility
-        '\x1b[?1048h',          # save cursor, not a screen switch
-        '\x1b[?10490h',         # a different number that contains 1049
-        '\x1b[1049h',           # not a private mode
-        '\x1b[?1049;2004;25',   # no final byte
-    ])
-    def test_other_sequences_are_no_switch(self, sequence):
-        assert clear_before_replay(sequence) == PREFIX_NO_SWITCH + sequence
-
-    def test_prefix_resets_no_input_mode(self):
-        """No full reset (ESC c), no soft reset (ESC [ ! p), no mode sequence
-        except the alternate screen."""
-        for text in ('', '\x1b[?1049hx', '\x1b[?1049lx'):
-            prefix = clear_before_replay(text)[:len(clear_before_replay(text)) - len(text)]
-            assert prefix in (PREFIX_NO_SWITCH, PREFIX_ENTRY, PREFIX_LEAVE)
-            assert '\x1bc' not in prefix
-            assert '\x1b[!p' not in prefix
-
-    @pytest.mark.parametrize('prefix', [PREFIX_NO_SWITCH, PREFIX_ENTRY, PREFIX_LEAVE])
-    def test_response_filter_leaves_prefix_intact(self, prefix):
-        filtered, counts, _ = filter_terminal_responses(prefix)
-        assert filtered == prefix
-        assert sum(counts.values()) == 0
-
-
-def _attach_clear(chunks, live=(), spy=None, **toggles):
-    """Drive the real patch over the real TermSocket.open: attach a socket
-    whose terminal holds `chunks` in read_buffer, then feed `live` to it as PTY
-    output. Returns the text of every stdout frame sent. `spy` is a list that
-    receives 'strip' and 'clear' in call order."""
-    class FakeTerminal:
-        def __init__(self):
-            self.clients = []
-            self.read_buffer = deque(chunks, maxlen=1000)
-            self.ptyproc = None
-
-    class FakeTermManager:
-        def get_terminal(self, name):
-            return FakeTerminal()
-
-    class FakeLoop:
-        def call_later(self, delay, fn, *args):
-            pass
-
-    class Sock(TermSocket):
-        """Real TermSocket methods; no tornado request, frames captured."""
-        ping_interval = 0
-        request = mock.MagicMock(path='/terminals/websocket/8')
-
-        def __init__(self):
-            self.term_manager = FakeTermManager()
-            self._logger = logging.getLogger(__name__)
-            self._enable_output_logging = False
-            self.frames = []
-
-        def write_message(self, message, binary=False):
-            self.frames.append(json.loads(message))
-
-    def recording(name, function):
-        def call(text):
-            spy.append(name)
-            return function(text)
-        return call
-
-    repaint = toggles.pop('repaint_on_attach', True)
-    patches = [
-        mock.patch.dict(EXT.DEFAULTS, toggles),
-        mock.patch.dict(ENABLED, {EXT.REDRAW_OPTION: repaint}),
-        mock.patch.object(EXT, 'patch_enabled', _patch_enabled),
-        mock.patch.object(tornado.ioloop.IOLoop, 'current', return_value=FakeLoop()),
-    ]
-    if spy is not None:
-        patches.append(mock.patch.object(
-            EXT, 'strip_replay_queries', recording('strip', EXT.strip_replay_queries)))
-        patches.append(mock.patch.object(
-            EXT, 'clear_before_replay', recording('clear', EXT.clear_before_replay)))
-    orig_open = TermSocket.open
-    orig_read = TermSocket.on_pty_read
-    try:
-        for patch in patches:
-            patch.start()
-        _install(mock.MagicMock())
-        sock = Sock()
-        TermSocket.open(sock, '8')
-        for text in live:
-            sock.on_pty_read(text)
-    finally:
-        for patch in reversed(patches):
-            patch.stop()
-        TermSocket.open = orig_open
-        TermSocket.on_pty_read = orig_read
-    return [text for kind, text in sock.frames if kind == 'stdout']
-
-
 class TestPatchedOpen:
-    """The prefix in front of the replay that TermSocket.open sends."""
+    """The replay TermSocket.open sends, with no screen clear and no added bytes."""
 
-    def test_default_is_on(self):
-        assert EXT.DEFAULTS['clear_before_replay'] is True
+    def test_replay_returned_unchanged_apart_from_query_stripping(self):
+        """A replay reaches the client byte for byte once its queries are removed."""
+        text = 'line1\r\nline2\r\n\x1b[32mgreen\x1b[0m'
+        assert _attach([text]) == [text]
+        assert _attach(['a\x1b[cb', '$ ']) == ['ab$ ']
 
-    def test_prefix_present_replay_bytes_unchanged(self):
-        assert _attach_clear(['a', 'b\r\n', '$ ']) == [PREFIX_NO_SWITCH + 'ab\r\n$ ']
+    def test_alternate_screen_replay_is_unchanged(self):
+        """A TUI replay gets no clear and no screen switch added."""
+        text = '\x1b[?1049hfull screen\x1b[?1049l'
+        assert _attach([text]) == [text]
 
-    def test_alternate_screen_branches_in_open(self):
-        assert _attach_clear(['x\x1b[?1049h', 'y']) == [PREFIX_ENTRY + 'x\x1b[?1049hy']
-        assert _attach_clear(['x\x1b[?1049l', 'y']) == [PREFIX_LEAVE + 'x\x1b[?1049ly']
+    def test_no_clear_in_replay_or_live_output(self):
+        """No frame carries a sequence the program did not print."""
+        frames = _attach(['a', 'b'], live=['live'])
+        assert frames == ['ab', 'live']
+        for frame in frames:
+            assert '\x1b[H' not in frame
+            assert '\x1b[2J' not in frame
+            assert '\x1b[3J' not in frame
 
-    def test_prefix_survives_response_filter_with_replies_in_replay(self):
-        frames = _attach_clear(['a\x1b[2;2R', 'b'])
-        assert frames == [PREFIX_NO_SWITCH + 'ab']
+    def test_empty_buffer_sends_nothing(self):
+        """terminado replays only a non-empty buffer; the patch sends no frame."""
+        assert _attach([]) == []
+        assert _attach([], live=['banner']) == ['banner']
+
+    def test_live_output_is_unchanged(self):
+        assert _attach(['old'], live=['live 1', 'live 2']) == ['old', 'live 1', 'live 2']
 
     def test_switch_off_replay_is_unchanged(self):
-        assert _attach_clear(['a', 'b'], clear_before_replay=False) == ['ab']
+        assert _attach(['a\x1b[cb'], strip_replay_queries=False) == ['a\x1b[cb']
 
-    def test_live_output_gets_no_prefix(self):
-        assert _attach_clear(['old'], live=['live 1', 'live 2']) == [PREFIX_NO_SWITCH + 'old', 'live 1', 'live 2']
+    def test_suppress_buffer_replay_sends_nothing(self):
+        assert _attach(['a', 'b'], suppress_buffer_replay=True) == []
+        assert _attach(['a'], live=['live'], suppress_buffer_replay=True) == ['live']
 
-    def test_nothing_sent_under_suppress_buffer_replay(self):
-        assert _attach_clear(['a', 'b'], suppress_buffer_replay=True) == []
-        assert _attach_clear(['a'], live=['live'], suppress_buffer_replay=True) == ['live']
+    def test_private_cpr_removed_from_live_and_replay(self):
+        assert _attach(['a\x1b[?52;1R', 'b']) == ['ab']
+        assert _attach(['a'], live=['live\x1b[?52;1R']) == ['a', 'live']
 
-    def test_clear_runs_with_query_stripping_off(self):
-        assert _attach_clear(['a\x1b[cb', '$ '], strip_replay_queries=False) == [PREFIX_NO_SWITCH + 'a\x1b[cb$ ']
-        # the replay hook is removed after open: live output is unchanged
-        assert _attach_clear(['a'], live=['live'], strip_replay_queries=False) == [PREFIX_NO_SWITCH + 'a', 'live']
 
-    def test_clear_runs_with_repaint_off(self):
-        assert _attach_clear(['a'], repaint_on_attach=False) == [PREFIX_NO_SWITCH + 'a']
-
-    def test_clear_is_the_only_installed_step(self):
-        assert _attach_clear(['a'], strip_replay_queries=False, repaint_on_attach=False) == [PREFIX_NO_SWITCH + 'a']
-
-    def test_empty_buffer_still_clears(self):
-        """terminado replays only a non-empty buffer; the clear is sent anyway."""
-        assert _attach_clear([], live=['banner']) == [PREFIX_NO_SWITCH, 'banner']
-
-    def test_empty_buffer_switch_off_sends_nothing(self):
-        assert _attach_clear([], live=['banner'], clear_before_replay=False) == ['banner']
-
-    def test_empty_buffer_under_suppress_buffer_replay_sends_nothing(self):
-        assert _attach_clear([], suppress_buffer_replay=True) == []
-        assert _attach_clear([], live=['banner'], suppress_buffer_replay=True) == ['banner']
-
-    def test_all_replay_steps_off_sends_replay_unchanged(self):
-        assert _attach_clear(
-            ['a\x1b[cb', '$ '], clear_before_replay=False, strip_replay_queries=False,
-        ) == ['a\x1b[cb$ ']
-
-    def test_order_strip_then_clear(self):
-        spy = []
-        frames = _attach_clear(['a\x1b[cb', '$ '], spy=spy)
-        assert spy == ['strip', 'clear']
-        assert frames == [PREFIX_NO_SWITCH + 'ab$ ']
-
-    def test_spy_sees_only_enabled_steps(self):
-        spy = []
-        _attach_clear(['a'], spy=spy, strip_replay_queries=False)
-        assert spy == ['clear']
-        spy = []
-        _attach_clear(['a'], spy=spy, clear_before_replay=False)
-        assert spy == ['strip']

@@ -29,7 +29,8 @@ const REDRAW_OPTION = 'redrawBackgroundTerminals';
  * The filtering of terminal query responses happens server-side in
  * `jupyter_server_terminals`. This plugin handles terminals whose xterm is not
  * opened yet (a background tab after a page load): such a terminal sends no
- * size to the server, and its history is drawn again when it is first shown.
+ * size to the server; at its first show the widget sends the fitted size and
+ * the hold steps the PTY once, so the running program repaints at it.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab_terminal_cpr_escape_fix:plugin',

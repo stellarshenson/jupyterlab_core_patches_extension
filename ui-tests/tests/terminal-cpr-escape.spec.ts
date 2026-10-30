@@ -2,11 +2,11 @@ import { expect, IJupyterLabPageFixture, test } from '@jupyterlab/galata';
 
 /**
  * The patch effect is the redraw of a terminal restored in a background tab.
- * The redraw reconnects the session, which opens a second websocket for that
- * terminal. The test counts the terminal's websocket opens instead of the
- * replayed history width: the width depends on the xterm buffer size and the
- * shell prompt, while the second open is produced by `refresh()` alone and
- * fails when the gate or the patch breaks.
+ * The redraw does not reconnect: the first show sends the fitted size and the
+ * patch steps the PTY one column narrower and back, which makes the running
+ * program repaint. The test counts the terminal's websocket opens instead of
+ * the replayed history width: the width depends on the xterm buffer size and
+ * the shell prompt, while a second open would come only from a reconnect.
  *
  * The server-side response filter has no Galata test: the idle-reconnect text
  * it removes needs a shell that strips ESC from a CPR response (fish), which
@@ -273,13 +273,21 @@ test('redraws a restored background terminal when the switch is on', async ({
 
   const { name, since } = await showBackgroundTerminal(page, watch);
 
-  expect(watch.since(name, 'open', since)).toHaveLength(2);
+  expect(watch.since(name, 'open', since)).toHaveLength(1);
   const sizes = watch
     .since(name, 'sent', since)
     .map(frame => JSON.parse(frame.payload!) as any[])
     .filter(message => message[0] === 'set_size')
     .map(message => [message[1], message[2]]);
   expect(sizes).not.toContainEqual([24, 80]);
+  expect(
+    sizes.some(
+      (size, index) =>
+        index > 0 &&
+        size[0] === sizes[index - 1][0] &&
+        size[1] === sizes[index - 1][1] - 1
+    )
+  ).toBe(true);
 });
 
 test('leaves the terminal to JupyterLab when redrawBackgroundTerminals is off', async ({

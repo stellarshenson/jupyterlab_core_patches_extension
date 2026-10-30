@@ -112,3 +112,36 @@ One settings switch per patch; false returns before patching; all default true.
   - test-tags: FUNCTIONAL, UNIT
   - log: 2026-10-29T07:56:36Z @kj added
   - log: 2026-10-29T09:40:13Z @kj closed
+- [x] `ACC-PATCH-16-OPEN-SAFE` **No screen clear on open or reconnect** - HIGH; An open or reconnect of a terminal emits no screen clear and no byte the program did not print.
+  - evidence: pytest 170 passed (TestPatchedOpen: replay unchanged apart from query stripping, empty buffer sends no frame, no clear in any frame); Jest 102 passed; lint:check 0 warnings, 0 errors
+  - test: pytest jupyterlab_core_patches_extension/tests/test_terminal_cpr_escape.py::TestPatchedOpen asserts an empty buffer sends no frame and a replay is returned unchanged apart from query stripping
+  - test-tags: UNIT
+  - log: 2026-10-30T12:18:41Z @kj added
+  - log: 2026-10-30T12:21:45Z @kj closed: verified by the new-replay contract tests
+- [x] `ACC-PATCH-17-SHOW-SAFE` **First show does not reconnect** - HIGH; A terminal's first show does not reconnect its session; the fitted size is sent and the running program repaints itself.
+  - evidence: Jest 102 passed: refresh never called, set_size held until open then forwarded, the first open steps the PTY one column and restores the fitted size; pytest 170 passed; lint:check 0 warnings, 0 errors
+  - test: Jest src/**tests**/terminal-cpr-escape.spec.ts asserts refresh is never called, the held set_size is dropped until the xterm opens and forwarded after, and the first open steps the PTY one column and restores the fitted size
+  - test-tags: UNIT
+  - log: 2026-10-30T12:18:43Z @kj added
+  - log: 2026-10-30T12:21:45Z @kj closed: verified by the first-show contract tests
+  - log: 2026-10-30T12:35:55Z @kj edited test "Jest src/**tests**/terminal-cpr-escape.spec.ts asserts refresh is never called, the held set_size is dropped until the xterm opens and forwarded after" -> "Jest src/**tests**/terminal-cpr-escape.spec.ts asserts refresh is never called, the held set_size is dropped until the xterm opens and forwarded after, and the first open steps the PTY one column and restores the fitted size"; evidence "Jest 102 passed: refresh never called, set_size held until open then forwarded, isEnabled false forwards it; pytest 170 passed; lint:check 0 warnings, 0 errors" -> "Jest 102 passed: refresh never called, set_size held until open then forwarded, the first open steps the PTY one column and restores the fitted size; pytest 170 passed; lint:check 0 warnings, 0 errors"
+- [x] `ACC-PATCH-18-PRIVATE` **Private CPR responses filtered** - HIGH; Private CPR responses, ESC-prefixed and bare, are removed from live output and from a replay.
+  - evidence: pytest 170 passed: test_filters_private_cpr, test_filters_bare_private_cpr and test_private_cpr_removed_from_live_and_replay; Jest 102 passed; lint:check 0 warnings, 0 errors
+  - test: pytest jupyterlab_core_patches_extension/tests/test_terminal_cpr_escape.py test_filters_private_cpr, test_filters_bare_private_cpr and test_private_cpr_removed_from_live_and_replay
+  - test-tags: UNIT
+  - log: 2026-10-30T12:18:45Z @kj added
+  - log: 2026-10-30T12:21:46Z @kj closed: verified by the private-CPR tests
+- [x] `ACC-PATCH-19-RESPONSES` **Extended responses filtered** - HIGH; The response filter removes the DSR answer, the XTWINOPS size reports, the DECRQSS reply and the kitty keyboard report, each in its ESC-prefixed form and in the bare form a shell leaves, with a named test for each.
+  - evidence: make test exit 0: pytest 185 passed, incl. test_filters_dsr_answer, test_filters_bare_dsr_answer, test_filters_xtwinops_8, test_filters_xtwinops_4, test_filters_bare_xtwinops, test_filters_decrqss_reply, test_filters_bare_decrqss_reply, test_filters_kitty_keyboard_report, test_filters_bare_kitty_keyboard_report and the four preserve tests; Jest 102 passed; lint:check 0 warnings, 0 errors
+  - test: pytest jupyterlab_core_patches_extension/tests/test_terminal_cpr_escape.py test_filters_dsr_answer, test_filters_bare_dsr_answer, test_filters_xtwinops_8, test_filters_xtwinops_4, test_filters_bare_xtwinops, test_filters_decrqss_reply, test_filters_bare_decrqss_reply, test_filters_kitty_keyboard_report and test_filters_bare_kitty_keyboard_report
+  - test-tags: UNIT
+  - mechanism: 2026-10-30T12:49:26Z @kj one FILTER_PATTERNS entry per response form, named, anchored on the response vocabulary; each bare variant carries the negative lookbehind on ESC
+  - log: 2026-10-30T12:49:26Z @kj added
+  - log: 2026-10-30T12:52:01Z @kj closed
+- [x] `ACC-PATCH-20-REPLAY-SHELL` **Replay strips every query at a shell prompt** - HIGH; A buffer replay strips every terminal query when the PTY foreground process group is one shell alone, and keeps a trailing query run only when it is not a shell.
+  - evidence: make test exit 0: pytest 185 passed, incl. test_replay_strips_trailing_query_when_shell_at_prompt and test_replay_keeps_trailing_query_when_not_shell; Jest 102 passed; lint:check 0 warnings, 0 errors
+  - test: pytest jupyterlab_core_patches_extension/tests/test_terminal_cpr_escape.py test_replay_strips_trailing_query_when_shell_at_prompt and test_replay_keeps_trailing_query_when_not_shell
+  - test-tags: UNIT
+  - mechanism: 2026-10-30T12:49:28Z @kj strip_replay_queries takes the _shell_at_prompt decision as a flag; _patched_open reads the terminal ptyproc and passes it
+  - log: 2026-10-30T12:49:28Z @kj added
+  - log: 2026-10-30T12:52:01Z @kj closed

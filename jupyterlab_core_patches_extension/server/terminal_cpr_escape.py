@@ -1,14 +1,15 @@
 """Server half of the terminal CPR escape patch.
 
 Filters terminal query responses that appear as literal text when reconnecting
-to idle terminals, strips terminal queries and clears the client before a
-buffer replay, and repaints a full-screen program after a client attaches. The
-frontend half holds back the size of an unopened xterm and redraws a background
-terminal at its real size when its tab is first shown.
+to idle terminals, strips terminal queries from a buffer replay, and repaints a
+full-screen program after a client attaches. The frontend half holds back the
+size of an unopened xterm until its tab is first shown, so the PTY keeps its
+real size, then steps the PTY once so the running program repaints at the
+fitted size.
 
 The source project is ``jupyterlab_terminal_cpr_escape_fix``; the patch logic is
-ported unchanged. The switch gate, the settings source and the import paths are
-the only changes.
+ported with the clear-before-replay step removed. The switch gate, the settings
+source, the import paths and that removal are the only changes.
 """
 
 import logging
@@ -28,12 +29,11 @@ REDRAW_OPTION = "redrawBackgroundTerminals"
 
 # Internal defaults of the source package. Only repaint_on_attach is a setting
 # in the combined extension, read as REDRAW_OPTION on each attach. The other
-# four stay fixed: the package exposes no switch for them.
+# three stay fixed: the package exposes no switch for them.
 DEFAULTS = {
     "suppress_buffer_replay": False,
     "filter_osc_color_responses": True,
     "strip_replay_queries": True,
-    "clear_before_replay": True,
 }
 
 # Set on TermSocket once the wrappers are in place, so a second
@@ -44,26 +44,42 @@ logger = logging.getLogger(__name__)
 
 # Patterns WITH the ESC prefix: terminal RESPONSE sequences. Queries are not
 # matched; stripping a query breaks terminal capability negotiation.
-# CPR response: ESC[row;colR (two numeric params)
+# CPR response: ESC[row;colR or ESC[?row;colR (two numeric params; the private
+#               form carries ? after the opening bracket)
 # DA response: ESC[?p1;p2;...c (params after ?)
 # DA2 response: ESC[>p1;p2;p3c (semicolon-separated params; bare ESC[>c is a
 #               query)
+# DSR answer: ESC[0n (status report, ready)
+# XTWINOPS report: ESC[8;rows;colst (text area) and ESC[4;height;widtht
+#               (pixels)
+# DECRQSS reply: ESC P digits $ r payload ST; the query is ESC P $ q ... ST
+# kitty keyboard report: ESC[?flags u, flags one or more ;-separated numbers;
+#               the query is ESC[?u
 # DECRPM: ESC[?mode;value$y
 # OSC: every ESC]N;... and ESC]4;n;... payload (N = 10, 11, 12) not starting
 #      with ?, so colour set commands (ESC]11;#282828 BEL) are removed as well
 #      as responses; the queries ESC]N;? and ESC]4;n;? are kept
-ESC_CPR = re.compile(r"\x1b\[\d+;\d+R")
+ESC_CPR = re.compile(r"\x1b\[\??\d+;\d+R")
 ESC_DA = re.compile(r"\x1b\[\?\d+[\d;]*c")
 ESC_DA2 = re.compile(r"\x1b\[>\d+;\d+[\d;]*c")
+ESC_DSR = re.compile(r"\x1b\[0n")
+ESC_XTWINOPS = re.compile(r"\x1b\[[48];\d+;\d+t")
+ESC_DECRQSS = re.compile(r"\x1bP\d+\$r[^\x1b]*\x1b\\")
+ESC_KITTY = re.compile(r"\x1b\[\?\d+(?:;\d+)*u")
 ESC_DECRPM = re.compile(r"\x1b\[\??\d+;\d+\$y")
 ESC_OSC = re.compile(r"\x1b\](?:4;\d+|10|11|12);(?!\?)[^\x07\x1b]*(?:\x07|\x1b\\)")
 
 # Patterns WITHOUT the ESC prefix: bare remnants after a shell strips ESC.
 # Fish receives ESC[row;colR, strips ESC and outputs [row;colR. The negative
-# lookbehind keeps an ESC-prefixed sequence from matching twice.
-BARE_CPR = re.compile(r"(?<!\x1b)\[\d+;\d+R")
+# lookbehind keeps an ESC-prefixed sequence from matching twice. The DECRQSS
+# remnant loses the ESC of the introducer and of the ST, leaving P1$r0m\.
+BARE_CPR = re.compile(r"(?<!\x1b)\[\??\d+;\d+R")
 BARE_DA = re.compile(r"(?<!\x1b)\[\?\d+[\d;]*c")
 BARE_DA2 = re.compile(r"(?<!\x1b)\[>\d+;\d+[\d;]*c")
+BARE_DSR = re.compile(r"(?<!\x1b)\[0n")
+BARE_XTWINOPS = re.compile(r"(?<!\x1b)\[[48];\d+;\d+t")
+BARE_DECRQSS = re.compile(r"(?<!\x1b)P\d+\$r[^\x1b\\]*(?:\x1b)?\\")
+BARE_KITTY = re.compile(r"(?<!\x1b)\[\?\d+(?:;\d+)*u")
 BARE_DECRPM = re.compile(r"(?<!\x1b)\[\??\d+;\d+\$y")
 # A bare OSC colour response: fish strips ESC from both the ] introducer and
 # the ST terminator, so ESC]11;rgb:..ST becomes ]11;rgb:..\ as literal text.
@@ -75,11 +91,19 @@ FILTER_PATTERNS = [
     ("cpr", ESC_CPR),
     ("da", ESC_DA),
     ("da2", ESC_DA2),
+    ("dsr", ESC_DSR),
+    ("xtwinops", ESC_XTWINOPS),
+    ("decrqss", ESC_DECRQSS),
+    ("kitty", ESC_KITTY),
     ("decrpm", ESC_DECRPM),
     ("osc", ESC_OSC),
     ("bare_cpr", BARE_CPR),
     ("bare_da", BARE_DA),
     ("bare_da2", BARE_DA2),
+    ("bare_dsr", BARE_DSR),
+    ("bare_xtwinops", BARE_XTWINOPS),
+    ("bare_decrqss", BARE_DECRQSS),
+    ("bare_kitty", BARE_KITTY),
     ("bare_decrpm", BARE_DECRPM),
     ("bare_osc", BARE_OSC),
 ]
@@ -101,17 +125,6 @@ REPLAY_QUERY = re.compile(
     r"|\x1b\[\??\d+\$p"
     r"|\x1bP\$q[^\x1b]*\x1b\\"
 )
-
-# Alternate-screen modes that decide which screen a replay starts on.
-_PRIVATE_MODE = re.compile(r"\x1b\[\?([\d;]*)([hl])")
-_ALTERNATE_SCREEN_MODES = {"47", "1047", "1049"}
-
-# Cursor home, erase screen, erase scrollback. No full reset (ESC c) and no soft
-# reset (ESC [ ! p): both reset input modes (bracketed paste, mouse reporting,
-# cursor keys) that must survive a plain reconnect.
-_CLEAR = "\x1b[H\x1b[2J\x1b[3J"
-_LEAVE_ALTERNATE = "\x1b[?1049l"
-_ENTER_ALTERNATE = "\x1b[?1049h"
 
 # Repaint on attach: after a client attaches and the buffer replay drains, set
 # the PTY one column narrower and back so the kernel delivers SIGWINCH and the
@@ -156,65 +169,30 @@ def filter_terminal_responses(text: str) -> tuple[str, dict[str, int], list[str]
     return result, counts, matched
 
 
-def strip_replay_queries(text: str) -> str:
+def strip_replay_queries(text: str, at_shell_prompt: bool = False) -> str:
     """Remove terminal queries from a buffer replay.
 
-    A run of queries that ends the text is kept: nothing was printed after it,
-    so the program that sent it may still be waiting for the answer.
+    When ``at_shell_prompt`` is True the foreground process group is one shell
+    alone, so no program is left waiting for an answer and every query is
+    removed, including a run that ends the text. Otherwise a run of queries
+    that ends the text is kept: nothing was printed after it, so the program
+    that sent it may still be waiting for the answer.
 
     Args:
         text: The buffered terminal output that TermSocket.open replays
+        at_shell_prompt: True when the foreground process group is one shell
 
     Returns:
-        The text with every query removed except a run that ends it
+        The text with every query removed, or with a run that ends it kept
     """
+    if at_shell_prompt:
+        return REPLAY_QUERY.sub("", text)
     keep_from = len(text)
     for match in reversed(list(REPLAY_QUERY.finditer(text))):
         if match.end() != keep_from:
             break
         keep_from = match.start()
     return REPLAY_QUERY.sub("", text[:keep_from]) + text[keep_from:]
-
-
-def _first_alternate_screen_switch(text: str) -> str | None:
-    """Return ``"h"`` or ``"l"`` for the first alternate-screen switch.
-
-    Args:
-        text: The replay text
-
-    Returns:
-        The mode character of the first switch, or ``None`` when there is none
-    """
-    for match in _PRIVATE_MODE.finditer(text):
-        if _ALTERNATE_SCREEN_MODES.intersection(match.group(1).split(";")):
-            return match.group(2)
-    return None
-
-
-def clear_before_replay(text: str) -> str:
-    """Put the sequences that empty the client's terminal in front of a replay.
-
-    Which screen the replay starts on decides the prefix:
-
-    - no alternate-screen switch in the replay: the screen the client shows now
-      is kept, because the whole replay belongs to it
-    - the first switch is an entry: the replay starts on the normal screen, so
-      the prefix leaves the alternate screen first
-    - the first switch is a leave: the replay starts inside the alternate
-      screen, so the prefix enters it again after the clear
-
-    Args:
-        text: The buffered terminal output that TermSocket.open replays
-
-    Returns:
-        The prefix followed by text, which is unchanged
-    """
-    switch = _first_alternate_screen_switch(text)
-    if switch is None:
-        return _CLEAR + text
-    if switch == "h":
-        return _LEAVE_ALTERNATE + _CLEAR + text
-    return _LEAVE_ALTERNATE + _CLEAR + _ENTER_ALTERNATE + text
 
 
 def _shell_at_prompt(term) -> bool:
@@ -349,11 +327,9 @@ def patch_term_socket(server_app):
     _original_open = TermSocket.open
     _last_bounce = {}  # terminal name -> monotonic time of last step
 
-    def _replay_steps(text):
+    def _replay_steps(text, ptyproc=None):
         if DEFAULTS["strip_replay_queries"]:
-            text = strip_replay_queries(text)
-        if DEFAULTS["clear_before_replay"]:
-            text = clear_before_replay(text)
+            text = strip_replay_queries(text, _shell_at_prompt(ptyproc))
         return text
 
     def _patched_open(self, url_component=None):
@@ -361,31 +337,19 @@ def patch_term_socket(server_app):
             _original_open(self, url_component)
             return
 
-        replays = []  # the replay texts the original open handed to the hook
         if DEFAULTS["suppress_buffer_replay"]:
             self.on_pty_read = lambda text: None
-        elif DEFAULTS["strip_replay_queries"] or DEFAULTS["clear_before_replay"]:
+        elif DEFAULTS["strip_replay_queries"]:
 
             def replay(text):
-                replays.append(text)
                 # the replay still goes through the response filter on the class
-                type(self).on_pty_read(self, _replay_steps(text))
+                type(self).on_pty_read(
+                    self, _replay_steps(text, self.terminal.ptyproc)
+                )
 
             self.on_pty_read = replay
         _original_open(self, url_component)
-        if (
-            DEFAULTS["clear_before_replay"]
-            and not DEFAULTS["suppress_buffer_replay"]
-            and not replays
-        ):
-            # an empty buffer skips the hook (terminado replays only a non-empty
-            # buffer); clear anyway, so a new shell starts on an empty screen
-            type(self).on_pty_read(self, clear_before_replay(""))
-        if (
-            DEFAULTS["suppress_buffer_replay"]
-            or DEFAULTS["strip_replay_queries"]
-            or DEFAULTS["clear_before_replay"]
-        ):
+        if DEFAULTS["suppress_buffer_replay"] or DEFAULTS["strip_replay_queries"]:
             try:
                 del self.on_pty_read
             except AttributeError:
@@ -414,8 +378,6 @@ def patch_term_socket(server_app):
         patches.append("buffer replay suppression")
     elif DEFAULTS["strip_replay_queries"]:
         patches.append("replay query stripping")
-    if DEFAULTS["clear_before_replay"] and not DEFAULTS["suppress_buffer_replay"]:
-        patches.append("clear before replay")
     if patch_enabled(server_app, REDRAW_OPTION):
         patches.append("repaint on attach")
 
