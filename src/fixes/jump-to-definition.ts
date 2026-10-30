@@ -8,6 +8,7 @@ import { IDocumentManager } from '@jupyterlab/docmanager';
 import { KernelMessage } from '@jupyterlab/services';
 import { ICommandPalette, showErrorMessage } from '@jupyterlab/apputils';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
+import { nullTranslator } from '@jupyterlab/translation';
 
 import { isPatchEnabled } from '../patches';
 import {
@@ -67,12 +68,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
       );
     };
 
+    const trans = nullTranslator.load('jupyterlab_core_patches_extension');
+
     // Add our command for jumping to definition using Jedi in kernel
     const commandId = KERNEL_JUMP_COMMAND_ID;
     app.commands.addCommand(commandId, {
-      label: 'Jump to definition',
-      caption:
-        'Jump to the definition of the selected symbol using Jedi in kernel environment',
+      label: trans.__('Jump to definition'),
+      caption: trans.__(
+        'Jump to the definition of the selected symbol using Jedi in kernel environment'
+      ),
+      describedBy: () => ({}),
       execute: async () => {
         const notebook = notebookTracker.currentWidget;
         if (!notebook) {
@@ -164,7 +169,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         };
         try {
           result = JSON.parse(output.trim());
-        } catch (e) {
+        } catch {
           await showErrorMessage(
             'Jump to Definition',
             `Failed to parse result: ${output}`

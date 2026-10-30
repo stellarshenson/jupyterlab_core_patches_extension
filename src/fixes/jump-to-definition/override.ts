@@ -1,4 +1,5 @@
 import { JupyterFrontEnd } from '@jupyterlab/application';
+import { nullTranslator } from '@jupyterlab/translation';
 
 /**
  * The stock LSP command that the patch replaces for Python notebooks.
@@ -39,6 +40,8 @@ export function installLspCommandOverride(
   }
   overriddenApps.add(app);
 
+  const trans = nullTranslator.load('jupyterlab_core_patches_extension');
+
   // Track if we've already overridden the LSP command
   let lspCommandOverridden = false;
 
@@ -72,8 +75,9 @@ export function installLspCommandOverride(
 
     // Re-register with our logic
     app.commands.addCommand(STOCK_LSP_COMMAND_ID, {
-      label: descriptor.label || 'Jump to definition',
+      label: descriptor.label || trans.__('Jump to definition'),
       icon: descriptor.icon,
+      describedBy: descriptor.describedBy ?? (() => ({})),
       execute: async (args?: any) => {
         // Check if we're in a Python notebook
         if (isPythonNotebook()) {

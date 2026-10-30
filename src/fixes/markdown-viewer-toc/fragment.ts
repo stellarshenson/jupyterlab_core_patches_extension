@@ -103,7 +103,7 @@ export function findFragmentTarget(
         break;
       }
     }
-  } catch (error) {
+  } catch {
     return null;
   }
 

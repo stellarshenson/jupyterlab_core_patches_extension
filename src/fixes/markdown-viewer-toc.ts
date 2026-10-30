@@ -45,9 +45,9 @@ const SWITCH_KEY = 'jupyterlab_markdown_viewer_toc_fix';
 function patchFragmentNavigation(
   renderMimeRegistry: IRenderMimeRegistry
 ): void {
-  const proto = Object.getPrototypeOf(
-    renderMimeRegistry.createRenderer('text/html')
-  );
+  const renderer = renderMimeRegistry.createRenderer('text/html');
+  const proto = Object.getPrototypeOf(renderer);
+  renderer.dispose?.();
 
   if (!proto || !proto.setFragment) {
     return;
@@ -62,7 +62,7 @@ function patchFragmentNavigation(
       el =
         this.node.querySelector(`#${escaped}`) ||
         this.node.querySelector(`[${NAMED_ID_ATTRIBUTE}="${escaped}"]`);
-    } catch (error) {
+    } catch {
       // A fragment that cannot be parsed falls through to the stock method.
     }
 
@@ -220,7 +220,7 @@ function patchWidgetTOC(
           if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
-        } catch (error) {
+        } catch {
           // A heading that cannot be resolved leaves the view where it is.
         }
       }

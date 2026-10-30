@@ -28,6 +28,15 @@ export default defineConfig([
     }
   },
   jupyterPlugin.configs.recommended,
+  // Each patch keeps its old package name as its plugin id by design (INTENT.md),
+  // so the new package-name prefix cannot apply to these ids. Trade-off: an
+  // extension-level disable by the new package name does not reach these ids.
+  {
+    files: ['src/fixes/**'],
+    rules: {
+      'jupyter/plugin-id-convention': 'off'
+    }
+  },
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {

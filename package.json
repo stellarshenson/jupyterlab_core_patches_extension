@@ -73,6 +73,7 @@
         "@jupyterlab/statedb": "^4.6.0",
         "@jupyterlab/terminal": "^4.6.0",
         "@jupyterlab/toc": "^6.6.0",
+        "@jupyterlab/translation": "^4.6.0",
         "@jupyterlab/ui-components": "^4.6.0",
         "@lumino/disposable": "^2.1.0",
         "@lumino/signaling": "^2.1.0",
