@@ -2,6 +2,17 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.9] - 2026-10-30
+
+### Changed
+
+- The labextension and npm package take the scoped name `@stellarshenson/jupyterlab-core-patches-extension`, so the settings id is `@stellarshenson/jupyterlab-core-patches-extension:plugin`; the Python distribution, the import package and the ten patch plugin ids keep their names
+- The wheel and the pip install command are unchanged, `jupyterlab_core_patches_extension`; npm consumers install the scoped package, because the labextension directory must equal the bundle package.json name
+
+### Fixed
+
+- Settings load on JupyterLab 4.6.5, whose client setting registry rejects a settings id whose scheme part holds an underscore; before the rename every patch switch fell back to its default and startup logged a settings failure
+
 ## [0.9.7] - 2026-10-29
 
 First published release.

@@ -3,7 +3,8 @@ import { ISettingRegistry } from '@jupyterlab/settingregistry';
 /**
  * The settings schema owner. Every patch reads its switch from this schema.
  */
-export const CORE_PATCHES_ID = 'jupyterlab-core-patches-extension:plugin';
+export const CORE_PATCHES_ID =
+  '@stellarshenson/jupyterlab-core-patches-extension:plugin';
 
 /**
  * The class a CSS-only patch puts on `document.body` while it is enabled.

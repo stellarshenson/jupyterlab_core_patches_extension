@@ -1,7 +1,7 @@
 # jupyterlab_core_patches_extension
 
 [![GitHub Actions](https://github.com/stellarshenson/jupyterlab_core_patches_extension/actions/workflows/build.yml/badge.svg)](https://github.com/stellarshenson/jupyterlab_core_patches_extension/actions/workflows/build.yml)
-[![npm version](https://img.shields.io/npm/v/jupyterlab-core-patches-extension.svg)](https://www.npmjs.com/package/jupyterlab-core-patches-extension)
+[![npm version](https://img.shields.io/npm/v/@stellarshenson/jupyterlab-core-patches-extension.svg)](https://www.npmjs.com/package/@stellarshenson/jupyterlab-core-patches-extension)
 [![PyPI version](https://img.shields.io/pypi/v/jupyterlab-core-patches-extension.svg)](https://pypi.org/project/jupyterlab-core-patches-extension/)
 [![Total PyPI downloads](https://static.pepy.tech/badge/jupyterlab-core-patches-extension)](https://pepy.tech/project/jupyterlab-core-patches-extension)
 [![JupyterLab 4](https://img.shields.io/badge/JupyterLab-4-orange.svg)](https://jupyterlab.readthedocs.io/en/stable/)

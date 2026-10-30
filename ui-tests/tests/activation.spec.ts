@@ -28,7 +28,7 @@ test('emits the activation message once', async ({ page }) => {
     logs.filter(
       line =>
         line ===
-        'JupyterLab extension jupyterlab-core-patches-extension is activated!'
+        'JupyterLab extension @stellarshenson/jupyterlab-core-patches-extension is activated!'
     )
   ).toHaveLength(1);
 });
@@ -40,7 +40,7 @@ test('loads one default-on switch per patch', async ({ page }) => {
     const app = (window as any).jupyterapp;
     const plugin = await app.serviceManager.settings.fetch(id);
     return plugin.schema;
-  }, 'jupyterlab-core-patches-extension:plugin');
+  }, '@stellarshenson/jupyterlab-core-patches-extension:plugin');
 
   const defaults = PATCH_KEYS.map(
     key => schema.properties[key]?.default as boolean | undefined

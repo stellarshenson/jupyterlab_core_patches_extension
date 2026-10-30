@@ -18,13 +18,14 @@ One labextension entry, one settings schema and the plugin ids that carry the te
   - test-tags: FUNCTIONAL, UNIT
   - log: 2026-10-29T07:56:35Z @kj added
   - log: 2026-10-29T09:40:12Z @kj closed
-- [x] `ACC-CORE-2-ACTIVATE` **Activation message** - MEDIUM; The main plugin logs JupyterLab extension jupyterlab-core-patches-extension is activated! exactly once on page load.
+- [x] `ACC-CORE-2-ACTIVATE` **Activation message** - MEDIUM; The main plugin logs JupyterLab extension @stellarshenson/jupyterlab-core-patches-extension is activated! exactly once on page load.
   - evidence: Galata activation.spec asserts exactly 1 activation message; 20 passed (galata.json)
   - test: ui-tests/tests/activation.spec.ts filters console messages and asserts length 1
   - test-tags: FUNCTIONAL
   - log: 2026-10-29T07:56:35Z @kj added
   - log: 2026-10-29T09:40:12Z @kj closed
   - log: 2026-10-29T15:05:57Z @kj edited text "The main plugin logs JupyterLab extension jupyterlab_core_patches_extension is activated! exactly once on page load." -> "The main plugin logs JupyterLab extension jupyterlab-core-patches-extension is activated! exactly once on page load."; reason: The labextension rename moves the activation message to the hyphenated name so the settings id stays URI-safe on JupyterLab 4.6.5
+  - log: 2026-10-30T08:13:26Z @kj edited text "The main plugin logs JupyterLab extension jupyterlab-core-patches-extension is activated! exactly once on page load." -> "The main plugin logs JupyterLab extension @stellarshenson/jupyterlab-core-patches-extension is activated! exactly once on page load."; reason: The npm package and labextension move to the scoped name @stellarshenson/jupyterlab-core-patches-extension, because npm rejects the unscoped name as too similar to the published Python distribution; the activation message carries the scoped name
 - [x] `ACC-CORE-3-GUARD` **Second patch skipped** - CRITICAL; A patch already applied by an installed old package is detected by its marker; the new plugin returns without patching a second time.
   - evidence: Jest 101/101; each guarded patch spec calls the patch twice and asserts a no-op (junit.xml)
   - test: src/**tests**/file-browser-column-width.spec.ts and the other guarded patches' Jest files call the patch twice and assert the second call is a no-op

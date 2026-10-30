@@ -31,7 +31,7 @@ const corePatches: JupyterFrontEndPlugin<void> = {
     settingRegistry: ISettingRegistry | null
   ): Promise<void> => {
     console.log(
-      'JupyterLab extension jupyterlab-core-patches-extension is activated!'
+      'JupyterLab extension @stellarshenson/jupyterlab-core-patches-extension is activated!'
     );
 
     if (!settingRegistry) {
@@ -40,12 +40,12 @@ const corePatches: JupyterFrontEndPlugin<void> = {
     try {
       const settings = await settingRegistry.load(CORE_PATCHES_ID);
       console.log(
-        'jupyterlab-core-patches-extension settings loaded:',
+        '@stellarshenson/jupyterlab-core-patches-extension settings loaded:',
         settings.composite
       );
     } catch (reason) {
       console.error(
-        'Failed to load settings for jupyterlab-core-patches-extension.',
+        'Failed to load settings for @stellarshenson/jupyterlab-core-patches-extension.',
         reason
       );
     }

@@ -13,7 +13,12 @@ except ImportError:
 
 
 def _jupyter_labextension_paths():
-    return [{"src": "labextension", "dest": "jupyterlab-core-patches-extension"}]
+    return [
+        {
+            "src": "labextension",
+            "dest": "@stellarshenson/jupyterlab-core-patches-extension",
+        }
+    ]
 
 
 def _jupyter_server_extension_points():
