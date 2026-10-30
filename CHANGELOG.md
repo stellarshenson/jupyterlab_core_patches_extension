@@ -2,6 +2,12 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.13] - 2026-10-30
+
+### Changed
+
+- No code change since 1.0.12: this release publishes the same terminal-CPR repair with the changelog, README row and journal committed
+
 ## [1.0.12] - 2026-10-30
 
 ### Changed
