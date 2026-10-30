@@ -2,6 +2,16 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.11] - 2026-10-30
+
+### Changed
+
+- Both lockfiles resolve every `@jupyterlab` package to one version, 4.6.5 on the 4.x line and apputils 4.7.5; `package.json`, its ranges and its resolutions are unchanged, so an install from either lockfile gets the same tree
+
+### Fixed
+
+- ESLint reports zero findings: twelve real warnings fixed (unused catch bindings, a leaked markdown TOC renderer, `describedBy` missing on two commands, three untranslated command strings) and the plugin-id rule scoped off for the patch plugins, which keep the old package names as their ids by design
+
 ## [1.0.10] - 2026-10-30
 
 ### Changed
