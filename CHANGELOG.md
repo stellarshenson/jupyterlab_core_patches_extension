@@ -2,6 +2,12 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.14] - 2026-10-30
+
+### Changed
+
+- No code change since 1.0.13: this release commits the bubblewrap sandbox verification of the terminal-CPR repair - vim drawn at 24x80 and repainted after a resize, a restored background terminal repainted at the fitted width, and the five response forms kept off the screen
+
 ## [1.0.13] - 2026-10-30
 
 ### Changed
