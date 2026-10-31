@@ -6,7 +6,7 @@ The frontend reports the names of the terminals with an open tab to the server e
 
 **Switch** - `jupyterlab_restore_terminals_fix`, boolean, default `true`. The frontend reads the switch on activation; a change applies on the next page reload. The server reads the switch when the server starts, before the startup re-creation.
 
-**Plugin id** - `jupyterlab_restore_terminals_fix:plugin`
+**Plugin id** - `@stellarshenson/jupyterlab-core-patches-extension:restore-terminals`
 
 **Patched member** - no prototype member is replaced. The plugin adds a `widgetAdded` connection and a 15 second interval that posts to `POST <base_url>/jupyterlab-restore-terminals-fix/state`. The server adds the routes `GET .../cwd/<name>`, `GET .../cwds` and `POST .../state`, and re-creates saved terminals during startup.
 

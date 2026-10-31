@@ -149,7 +149,7 @@ export function patchDirListing(version: string): boolean {
  * Initialization data for the jupyterlab_file_browser_column_width_fix extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_file_browser_column_width_fix:plugin',
+  id: '@stellarshenson/jupyterlab-core-patches-extension:file-browser-column-width',
   description:
     'Keeps the JupyterLab file browser column widths valid when the cached panel width is stale',
   autoStart: true,

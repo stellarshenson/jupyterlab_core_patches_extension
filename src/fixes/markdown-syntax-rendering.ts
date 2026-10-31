@@ -12,7 +12,7 @@ import { injectHighlightRules } from './markdown-syntax-rendering/highlight';
  * Initialization data for the jupyterlab_markdown_syntax_rendering_fix patch.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_markdown_syntax_rendering_fix:plugin',
+  id: '@stellarshenson/jupyterlab-core-patches-extension:markdown-syntax-rendering',
   description:
     'Restore syntax highlighting in rendered Markdown code blocks by mounting the CodeMirror highlight StyleModule at startup, so token colours apply even when no editor is open.',
   autoStart: true,

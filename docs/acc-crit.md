@@ -12,12 +12,13 @@ One labextension entry, one settings schema and the plugin ids that carry the te
 
 - log: 2026-10-29T07:56:35Z @kj category created
 
-- [x] `ACC-CORE-1-ENTRY` **One entry, ten patches** - HIGH; One labextension entry; schema/plugin.json holds ten booleans, all default true; each patch plugin keeps its old package name as its id.
+- [x] `ACC-CORE-1-ENTRY` **One entry, ten patches** - HIGH; One labextension entry; schema/plugin.json holds ten booleans, all default true; each patch plugin id is @stellarshenson/jupyterlab-core-patches-extension:<slug>, so a disable of the package reaches it.
   - evidence: Galata activation.spec 20/20; pytest test_extension.py 3 passed; schema 10 booleans, built labextension identical (verify2.json)
   - test: ui-tests/tests/activation.spec.ts checks the entry; jupyterlab_core_patches_extension/tests/test_extension.py checks ten schema booleans
   - test-tags: FUNCTIONAL, UNIT
   - log: 2026-10-29T07:56:35Z @kj added
   - log: 2026-10-29T09:40:12Z @kj closed
+  - log: 2026-10-31T16:27:22Z @kj edited text "One labextension entry; schema/plugin.json holds ten booleans, all default true; each patch plugin keeps its old package name as its id." -> "One labextension entry; schema/plugin.json holds ten booleans, all default true; each patch plugin id is @stellarshenson/jupyterlab-core-patches-extension:<slug>, so a disable of the package reaches it."; reason: jupyter labextension disable of the package left the ten patches active under the old ids
 - [x] `ACC-CORE-2-ACTIVATE` **Activation message** - MEDIUM; The main plugin logs JupyterLab extension @stellarshenson/jupyterlab-core-patches-extension is activated! exactly once on page load.
   - evidence: Galata activation.spec asserts exactly 1 activation message; 20 passed (galata.json)
   - test: ui-tests/tests/activation.spec.ts filters console messages and asserts length 1

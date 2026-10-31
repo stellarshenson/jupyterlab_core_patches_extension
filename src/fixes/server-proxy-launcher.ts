@@ -18,7 +18,7 @@ const SWITCH_KEY = 'jupyterlab_server_proxy_launcher_fix';
  * Initialization data for the jupyterlab_server_proxy_launcher_fix patch.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_server_proxy_launcher_fix:plugin',
+  id: '@stellarshenson/jupyterlab-core-patches-extension:server-proxy-launcher',
   description:
     'Render SVG icons of jupyter-server-proxy launchers in custom launcher categories',
   autoStart: true,

@@ -72,7 +72,9 @@ function postedNames(callIndex: number): string[] {
 
 describe('jupyterlab_restore_terminals_fix', () => {
   it('should export a plugin with correct id', () => {
-    expect(plugin.id).toBe('jupyterlab_restore_terminals_fix:plugin');
+    expect(plugin.id).toBe(
+      '@stellarshenson/jupyterlab-core-patches-extension:restore-terminals'
+    );
   });
 
   it('should require ITerminalTracker', () => {

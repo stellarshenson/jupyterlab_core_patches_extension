@@ -22,7 +22,7 @@ Each source project sits beside this one under `/home/lab/workspace/private/jupy
 ## Behaviour
 
 - One extension entry, one settings schema, ten plugins inside the package
-- Each plugin keeps its old package name as its plugin id
+- Each plugin id is `@stellarshenson/jupyterlab-core-patches-extension:<slug>`, so `jupyter labextension disable` of the package reaches all of them; the old package name stays as the switch key
 - The schema holds one boolean per fix, default true
 - An `activate` whose flag is false returns before patching
 - A flag change applies on the next page reload

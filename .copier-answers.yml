@@ -8,7 +8,7 @@ has_ai_rules: false
 has_binder: false
 has_settings: true
 kind: frontend-and-server
-labextension_name: jupyterlab_core_patches_extension
+labextension_name: '@stellarshenson/jupyterlab-core-patches-extension'
 project_short_description: One JupyterLab extension carrying ten upstream core patches,
     each switchable from Settings
 python_name: jupyterlab_core_patches_extension

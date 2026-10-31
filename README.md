@@ -57,7 +57,7 @@ flowchart LR
     subgraph NEW["After - one extension"]
         direction TB
         ONE[1 extension<br/>1 labextension entry<br/>1 settings schema<br/>1 Extension Manager row<br/>1 federated bundle<br/>1 release per JupyterLab change]:::ui
-        PLUG[10 patch plugins<br/>1 switch each<br/>old package names kept as plugin ids]:::ui
+        PLUG[10 patch plugins<br/>1 switch each<br/>plugin ids under the package name]:::ui
         ONE --> PLUG
     end
     TEN --> ONE

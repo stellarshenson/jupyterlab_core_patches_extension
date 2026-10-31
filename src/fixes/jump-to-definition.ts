@@ -31,7 +31,7 @@ const SWITCH_KEY = 'jupyterlab_jump_to_definition_fix';
  * Initialization data for the jupyterlab_jump_to_definition_fix extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_jump_to_definition_fix:plugin',
+  id: '@stellarshenson/jupyterlab-core-patches-extension:jump-to-definition',
   description:
     "Jupyterlab fix disguised as extension to fix action 'jump to definition' from notebook to the source file / definition within the context of the notebook's kernel. Without the fix package would need to be installed in the same environment as jupyterlab to allo jump to definition",
   autoStart: true,

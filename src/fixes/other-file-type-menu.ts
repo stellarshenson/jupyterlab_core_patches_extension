@@ -97,7 +97,7 @@ export class ContextMenuFixExtension
  * Initialization data for the jupyterlab_other_file_type_menu_fix extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_other_file_type_menu_fix:plugin',
+  id: '@stellarshenson/jupyterlab-core-patches-extension:other-file-type-menu',
   description:
     'Fix context menu for non-standard file types (LICENSE, .gitignore, etc.) ' +
     'that show stale/inert menus with broken hover highlighting',

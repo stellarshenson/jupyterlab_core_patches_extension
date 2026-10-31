@@ -254,7 +254,7 @@ function setupTOCNavigation(
  * Initialization data for the jupyterlab_markdown_viewer_toc_fix extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_markdown_viewer_toc_fix:plugin',
+  id: '@stellarshenson/jupyterlab-core-patches-extension:markdown-viewer-toc',
   description:
     'Fixes TOC navigation and anchor links in Markdown Viewer for JupyterLab 4.x',
   autoStart: true,

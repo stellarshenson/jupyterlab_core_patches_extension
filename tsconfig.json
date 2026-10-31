@@ -21,5 +21,5 @@
     "target": "ES2018",
     "types": ["jest"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"] // template-sync: keep - composite needs every source under src/fixes/ listed (TS6307)
 }

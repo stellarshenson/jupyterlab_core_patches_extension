@@ -6,3 +6,4 @@ node_modules
 jupyterlab_core_patches_extension
 eslint.config.mjs
 .venv
+package-lock.json

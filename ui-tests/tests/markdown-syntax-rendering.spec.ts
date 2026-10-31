@@ -46,7 +46,7 @@ async function waitForSettings(page: any): Promise<void> {
     const app = (window as any).jupyterapp;
     return (
       app?.isPluginActivated?.(
-        'jupyterlab_markdown_syntax_rendering_fix:plugin'
+        '@stellarshenson/jupyterlab-core-patches-extension:markdown-syntax-rendering'
       ) === true
     );
   });

@@ -68,7 +68,7 @@ async function reportLayoutTerminals(
  * Initialization data for the jupyterlab_restore_terminals_fix extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_restore_terminals_fix:plugin',
+  id: '@stellarshenson/jupyterlab-core-patches-extension:restore-terminals',
   description:
     'Restores terminal working directories after workspace restoration.',
   autoStart: true,

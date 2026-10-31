@@ -48,7 +48,7 @@ const STABILITY_THRESHOLD = 3;
  * Initialization data for the markdown switch-tab scrolling patch.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_markdown_switch_tab_scrolling_fix:plugin',
+  id: '@stellarshenson/jupyterlab-core-patches-extension:markdown-switch-tab-scrolling',
   description:
     'Keeps the scroll position of a Markdown view while images load after switching tabs',
   autoStart: true,

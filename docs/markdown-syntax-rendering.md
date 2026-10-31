@@ -3,7 +3,7 @@
 Restores syntax-highlight colours in rendered Markdown fenced code blocks when no CodeMirror editor is open. This page documents the `markdown-syntax-rendering` patch, a direct replacement for the discrete `jupyterlab_markdown_syntax_rendering_fix` package.
 
 - **Switch** - `jupyterlab_markdown_syntax_rendering_fix`, boolean, default `true`; a change applies on the next page reload
-- **Plugin id** - `jupyterlab_markdown_syntax_rendering_fix:plugin`
+- **Plugin id** - `@stellarshenson/jupyterlab-core-patches-extension:markdown-syntax-rendering`
 - **Patched member** - `jupyterHighlightStyle.module.getRules()` from `@jupyterlab/codemirror`; the returned CSS is injected into one `<style>` element in the document head
 - **Guard** - fixed style element id `jupyterlab-markdown-syntax-rendering-fix-highlight`; a second injection finds the element and returns, and an empty rule string is ignored
 - **Source** - `jupyterlab_markdown_syntax_rendering_fix` version 1.0.2

@@ -1,6 +1,6 @@
 {
     "name": "@stellarshenson/jupyterlab-core-patches-extension",
-    "version": "1.0.14",
+    "version": "1.0.16",
     "description": "One JupyterLab extension carrying ten upstream core patches, each switchable from Settings",
     "keywords": [
         "jupyter",
@@ -58,7 +58,7 @@
     },
     "dependencies": {
         "@jupyterlab/application": "^4.6.0",
-        "@jupyterlab/apputils": "^4.6.0",
+        "@jupyterlab/apputils": "^4.7.0",
         "@jupyterlab/codemirror": "^4.6.0",
         "@jupyterlab/coreutils": "^6.6.0",
         "@jupyterlab/docmanager": "^4.6.0",

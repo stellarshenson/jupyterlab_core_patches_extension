@@ -3,7 +3,7 @@
 Repairs the context menu for files with no registered file type and stops the LSP adapter from crashing on file types that have no mime types. This page documents the `other-file-type-menu` patch in `jupyterlab_core_patches_extension`, the direct replacement for the discrete `jupyterlab_other_file_type_menu_fix` package and for that package's entry in the `stellars_jupyterlab_fixes` bundle. Uninstall the bundle and the discrete package before installing the combined extension, because two installed copies register the widget extension twice.
 
 - **Switch** - `jupyterlab_other_file_type_menu_fix`, boolean, default `true`; a change applies on the next page reload
-- **Plugin id** - `jupyterlab_other_file_type_menu_fix:plugin`
+- **Plugin id** - `@stellarshenson/jupyterlab-core-patches-extension:other-file-type-menu`
 - **Patched member** - a capture-phase `contextmenu` listener on the node of every widget created by the `Editor` factory, and the `mimeTypes` array of every document registry file type that has none
 - **Guard** - `ContextMenuFixExtension._patched`, the source's flag: the registry scan runs on the first `createNew` call and every later call skips it
 - **Source** - `jupyterlab_other_file_type_menu_fix` v1.0.14, `src/index.ts`; the patch logic is ported unchanged, with the switch gate, the settings source and the import paths as the only changes

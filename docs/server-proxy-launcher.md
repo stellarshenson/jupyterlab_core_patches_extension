@@ -5,7 +5,7 @@ Renders the SVG icons of jupyter-server-proxy launchers that sit in a custom cat
 This page documents the `server-proxy-launcher` patch inside `jupyterlab_core_patches_extension`, the direct replacement for the `stellars_jupyterlab_fixes` metapackage and for the discrete `jupyterlab_server_proxy_launcher_fix` package. Uninstall both before installing this extension, because two installed copies apply every patch twice.
 
 - **Switch**: `jupyterlab_server_proxy_launcher_fix`, boolean, default `true`; a change applies on the next page reload
-- **Plugin id**: `jupyterlab_server_proxy_launcher_fix:plugin`
+- **Plugin id**: `@stellarshenson/jupyterlab-core-patches-extension:server-proxy-launcher`
 - **Patched member**: `app.commands.icon` on the `JupyterFrontEnd` command registry
 - **Guard**: the registry property `__serverProxyLauncherFixPatched`, set before the fetch; a second install returns `false` and leaves the installed wrapper in place. The source package had no guard
 - **Source**: `/home/lab/workspace/private/jupyterlab/jupyterlab_server_proxy_launcher_fix`

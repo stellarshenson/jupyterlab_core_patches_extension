@@ -3,7 +3,7 @@
 Restores table-of-contents navigation and in-document anchor links in the Markdown Viewer. This extension is a direct replacement for the discrete `jupyterlab_markdown_viewer_toc_fix` package and for the `stellars_jupyterlab_fixes` bundle that installs it. Uninstall both before enabling this one, because two installed copies apply the patch twice.
 
 - **Switch** - `jupyterlab_markdown_viewer_toc_fix`, boolean, default `true`; a change applies on the next page reload
-- **Plugin id** - `jupyterlab_markdown_viewer_toc_fix:plugin`
+- **Plugin id** - `@stellarshenson/jupyterlab-core-patches-extension:markdown-viewer-toc`
 - **Patched member** - `RenderedHTMLCommon.prototype.setFragment` for the `text/html` renderer, each Markdown Viewer content's `setFragment`, and each viewer's TOC model `activeHeadingChanged` signal
 - **Guard** - the window key `__jp_markdown_viewer_toc_fix__` records an active patch, so a second activation returns before it wraps the prototype or connects another tracker signal
 - **Source** - `/home/lab/workspace/private/jupyterlab/jupyterlab_markdown_viewer_toc_fix`
@@ -36,7 +36,7 @@ JupyterLab's HTML sanitizer removes `id` attributes when `allowNamedProperties` 
 
 | Member                        | Kind              | Purpose                                                                                             |
 | ----------------------------- | ----------------- | --------------------------------------------------------------------------------------------------- |
-| `default`                     | plugin            | Registers the patch under the source plugin id and gates it on the switch                           |
+| `default`                     | plugin            | Registers the patch under its plugin id and gates it on the switch                                  |
 | `PATCH_MARKER`                | exported constant | Window key `__jp_markdown_viewer_toc_fix__` that makes a second activation a no-op                  |
 | `SWITCH_KEY`                  | constant          | The settings schema key the gate reads                                                              |
 | `patchFragmentNavigation`     | helper            | Wraps the `text/html` renderer prototype `setFragment`                                              |

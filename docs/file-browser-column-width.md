@@ -1,9 +1,9 @@
 # File browser column width
 
-Recovers a stale cached content width in the JupyterLab file browser before the stock column clamp turns the column sizes negative. The Name column and the item text stay visible after a saved 24 px layout or a sidebar resize. This page documents the `file-browser-column-width` patch inside `jupyterlab_core_patches_extension`, the direct replacement for the discrete `jupyterlab_file_browser_column_width_fix` package and for its entry in the `stellars_jupyterlab_fixes` bundle. Uninstall the discrete package and the bundle before installing the combined extension, because two installed copies register the same plugin id.
+Recovers a stale cached content width in the JupyterLab file browser before the stock column clamp turns the column sizes negative. The Name column and the item text stay visible after a saved 24 px layout or a sidebar resize. This page documents the `file-browser-column-width` patch inside `jupyterlab_core_patches_extension`, the direct replacement for the discrete `jupyterlab_file_browser_column_width_fix` package and for its entry in the `stellars_jupyterlab_fixes` bundle. Uninstall the discrete package and the bundle before installing the combined extension, because two installed copies apply the patch twice.
 
 - **Switch** - `jupyterlab_file_browser_column_width_fix`, boolean, default `true`
-- **Plugin id** - `jupyterlab_file_browser_column_width_fix:plugin`
+- **Plugin id** - `@stellarshenson/jupyterlab-core-patches-extension:file-browser-column-width`
 - **Patched member** - `DirListing.prototype._updateColumnSizes`, `DirListing.prototype._setColumnSize` and `DirListing.prototype._saveState`
 - **Guard** - `DirListing.prototype.__fileBrowserColumnWidthFixPatched`, set before the wrappers are installed
 - **Source** - `/home/lab/workspace/private/jupyterlab/jupyterlab_file_browser_column_width_fix`

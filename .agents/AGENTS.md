@@ -13,7 +13,7 @@ The workspace path was absent when this file was written. The import resolves to
 
 - **One entry, eleven plugins** - one labextension entry, one settings schema, ten patch plugins plus one main plugin
 - **One switch per patch** - each patch has one boolean in the shared schema, default `true`
-- **Old plugin ids** - each patch keeps its old package name as its plugin id
+- **Plugin ids** - each patch plugin id is `@stellarshenson/jupyterlab-core-patches-extension:<slug>`, so a disable of the package reaches it; the old package name stays as the switch key
 - **Scope** - `INTENT.md` is the authority for what the extension must do; port the patch logic unchanged
 - **Stack** - TypeScript frontend, Python packaging, Jest, pytest, Playwright/Galata
 - **Sources** - the ten source projects sit beside this one under `/home/lab/workspace/private/jupyterlab/`

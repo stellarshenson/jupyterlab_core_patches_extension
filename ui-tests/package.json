@@ -1,5 +1,5 @@
 {
-  "name": "jupyterlab_core_patches_extension-ui-tests",
+  "name": "@stellarshenson/jupyterlab-core-patches-extension-ui-tests",
   "version": "1.0.0",
   "description": "JupyterLab jupyterlab_core_patches_extension Integration Tests",
   "private": true,

@@ -6,7 +6,7 @@ The patch replaces the `lsp:jump-to-definition` action in Python notebooks with 
 
 **Switch** - `jupyterlab_jump_to_definition_fix`, boolean, default `true`. The plugin reads the switch on activation; a change applies on the next page reload.
 
-**Plugin id** - `jupyterlab_jump_to_definition_fix:plugin`
+**Plugin id** - `@stellarshenson/jupyterlab-core-patches-extension:jump-to-definition`
 
 **Patched member** - the `lsp:jump-to-definition` command descriptor. The plugin re-registers the command with a dispatcher and keeps the stock label and icon. The plugin also registers `notebook:jump-to-definition-kernel` and binds `Accel B` in `.jp-Notebook.jp-mod-editMode`.
 

@@ -33,7 +33,7 @@ const REDRAW_OPTION = 'redrawBackgroundTerminals';
  * the hold steps the PTY once, so the running program repaints at it.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_terminal_cpr_escape_fix:plugin',
+  id: '@stellarshenson/jupyterlab-core-patches-extension:terminal-cpr-escape',
   description:
     'Fix CPR escape sequences in idle terminal reconnections and redraw background terminals at their real size when first shown',
   autoStart: true,

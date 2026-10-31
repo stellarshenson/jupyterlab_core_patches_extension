@@ -3,7 +3,7 @@
 Scales file browser icons with the UI font size and centers item text against its icon. This page documents the patch inside `jupyterlab_core_patches_extension`, the direct replacement for the discrete `jupyterlab_change_ui_font_size_fix` package.
 
 - **Switch** - `jupyterlab_change_ui_font_size_fix`, boolean, default `true`
-- **Plugin id** - `jupyterlab_change_ui_font_size_fix:plugin`
+- **Plugin id** - `@stellarshenson/jupyterlab-core-patches-extension:change-ui-font-size`
 - **Patched member** - `.jp-DirListing-item`, `.jp-DirListing-itemIcon`, `.jp-DirListing-itemText`, `.jp-DirListing-itemText span` and `.jp-DirListing-itemIcon svg` in `style/change-ui-font-size.css`
 - **Guard** - none in the source; the patch is idempotent because it only adds the body class `jp-core-patches-change-ui-font-size`, and `classList.add` does not add a class twice
 - **Source** - `jupyterlab_change_ui_font_size_fix`

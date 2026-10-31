@@ -381,7 +381,15 @@ def test_macos_fallback_uses_pgrep_and_lsof(monkeypatch):
     assert ["lsof", "-a", "-p", "4321", "-d", "cwd", "-Fn"] in calls
 
 
-def test_workspaces_dir_defaults_without_lab_app(jp_serverapp, jp_config_dir):
+@pytest.fixture
+def no_workspaces_dir_env(monkeypatch):
+    # JupyterLab's own variable overrides the default folder; unset before the server starts
+    monkeypatch.delenv("JUPYTERLAB_WORKSPACES_DIR", raising=False)
+
+
+def test_workspaces_dir_defaults_without_lab_app(
+    no_workspaces_dir_env, jp_serverapp, jp_config_dir
+):
     """DEF-SERVER-2: without a loaded LabApp the handler reads JupyterLab's default folder."""
     settings = jp_serverapp.web_app.settings
     expected = os.path.join(str(jp_config_dir), "lab", "workspaces")
