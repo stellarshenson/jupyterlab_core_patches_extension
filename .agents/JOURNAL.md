@@ -105,3 +105,6 @@ This journal tracks substantive work on documents, diagrams, and documentation c
 
 34. **Task - Require Python 3.12** (v1.0.18): raised the minimum Python to 3.12 on the owner's decision<br>
     **Result**: `requires-python` in `pyproject.toml` moved to `>=3.12`, and the classifiers for Python 3.10 and 3.11 are removed. Runtime floors already excluded older versions on some extensions, where pip then installed a release from before the scoped npm rename with no error. The dependency floors stay. `uv pip compile --python-version 3.12` resolves every runtime requirement, and CI runs Python 3.13.
+
+35. **Task - Build lifecycle brought to Makefile 1.48** (v1.0.18): the canonical Makefile went to every extension on 2026-11-02<br>
+    **Result**: The project took Makefile 1.48 verbatim, identical to `@utils/jupyterlab-extensions/Makefile`, so a later comparison shows no local change. `mrproper` now also removes `tmp`, `logs`, `.venv`, `graphify-out`, `coverage` and `.pytest_cache`, which clears the tree to the state the checkpoint tag records; `install` and `publish` are `.NOTPARALLEL`, so neither target races its dependencies. The working tree is clean at `8f00add`, and the tag `CHECKPOINT_JUPYTERLAB_4.6.5_UPGRADE_PORTED_1.0.18` is on the local and remote repository.
