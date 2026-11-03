@@ -30,10 +30,13 @@ const BOUNCE_STEP = 120;
  * @param terminal - The terminal widget
  * @param isEnabled - Read at each decision; false leaves the terminal to
  * JupyterLab
+ * @param isRestored - Read at the first fitted size; false sends that size
+ * without the step, for a session the page started new
  */
 export function holdUntilOpened(
   terminal: ITerminal.ITerminal,
-  isEnabled: () => boolean
+  isEnabled: () => boolean,
+  isRestored: () => boolean = () => true
 ): void {
   if (heldTerminals.has(terminal)) {
     return;
@@ -85,7 +88,8 @@ export function holdUntilOpened(
       message.type !== 'set_size' ||
       !message.content ||
       stepped ||
-      !isEnabled()
+      !isEnabled() ||
+      !isRestored()
     ) {
       return;
     }

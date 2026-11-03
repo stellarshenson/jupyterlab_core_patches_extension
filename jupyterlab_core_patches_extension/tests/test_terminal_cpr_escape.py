@@ -840,11 +840,13 @@ class TestWinsizeBounce:
             def call_later(self, delay, fn, *args):
                 callbacks.append(fn)
 
+        terminal = PtyWithClientsFake(ptyproc)
+
         class FakeSock:
             term_name = ''
 
             def __init__(self):
-                self.terminal = PtyWithClientsFake(ptyproc)
+                self.terminal = terminal
 
             def on_pty_read(self, text):
                 pass
@@ -856,10 +858,14 @@ class TestWinsizeBounce:
         orig_read = TermSocket.on_pty_read
         try:
             TermSocket.open = simulated_open  # the patch captures this as _original_open
+            now = [1000.0]
             with mock.patch.object(EXT, 'patch_enabled', _patch_enabled), \
-                    mock.patch.object(tornado.ioloop.IOLoop, 'current', return_value=FakeLoop()):
+                    mock.patch.object(tornado.ioloop.IOLoop, 'current', return_value=FakeLoop()), \
+                    mock.patch('time.monotonic', lambda: now[0]):
                 _install(mock.MagicMock())
-                TermSocket.open(FakeSock(), '8')
+                TermSocket.open(FakeSock(), '8')  # first attach: no step
+                now[0] += EXT._BOUNCE_DEBOUNCE
+                TermSocket.open(FakeSock(), '8')  # reattach
                 assert len(callbacks) == 1, f'expected 1 scheduled bounce, got {len(callbacks)}'
                 callbacks[0]()  # bounce -> narrows, schedules restore
                 assert len(callbacks) == 2, f'expected restore scheduled, got {len(callbacks)}'
@@ -884,9 +890,11 @@ class TestWinsizeBounce:
             def call_later(self, delay, fn, *args):
                 callbacks.append(fn)
 
+        terminals = {name: PtyWithClientsFake(self._fake_term()) for name in ('8', '9')}
+
         class FakeSock:
-            def __init__(self, pp):
-                self.terminal = PtyWithClientsFake(pp)
+            def __init__(self, name):
+                self.terminal = terminals[name]
                 self.term_name = ''
 
             def on_pty_read(self, text):
@@ -899,18 +907,71 @@ class TestWinsizeBounce:
         orig_read = TermSocket.on_pty_read
         try:
             TermSocket.open = simulated_open  # the patch captures this as _original_open
+            now = [1000.0 - EXT._BOUNCE_DEBOUNCE]
+            with mock.patch.object(EXT, 'patch_enabled', _patch_enabled), \
+                    mock.patch.object(tornado.ioloop.IOLoop, 'current', return_value=FakeLoop()), \
+                    mock.patch('time.monotonic', lambda: now[0]):
+                _install(mock.MagicMock())
+                TermSocket.open(FakeSock('8'), '8')  # first attaches: no step
+                TermSocket.open(FakeSock('9'), '9')
+                assert callbacks == []
+                now[0] += 5.0
+                TermSocket.open(FakeSock('8'), '8')
+                TermSocket.open(FakeSock('8'), '8')  # inside the window -> debounced
+                assert len(callbacks) == 1
+                now[0] += 5.0                     # age past the debounce window
+                TermSocket.open(FakeSock('9'), '9')  # bounces; prunes stale '8'
+                TermSocket.open(FakeSock('8'), '8')  # '8' pruned -> treated as fresh
+                assert len(callbacks) == 3
+        finally:
+            TermSocket.open = orig_open
+            TermSocket.on_pty_read = orig_read
+
+    def test_no_step_on_first_attach(self):
+        """ACC-PATCH-22-FIRST-ATTACH: the first attach of a terminal schedules
+        no step, so a command the new session runs reads the fitted size. A
+        later attach of the same terminal, as after a page reload, is stepped.
+        A new terminal under the reused name of a closed one is attached for
+        the first time."""
+        class PtyWithClientsFake:
+            def __init__(self, pp):
+                self.ptyproc = pp
+
+        callbacks = []
+
+        class FakeLoop:
+            def call_later(self, delay, fn, *args):
+                callbacks.append((delay, fn))
+
+        class FakeSock:
+            def __init__(self, terminal):
+                self.terminal = terminal
+                self.term_name = ''
+
+            def on_pty_read(self, text):
+                pass
+
+        def simulated_open(self, url_component=None):
+            self.term_name = url_component or 'tty'
+
+        terminal = PtyWithClientsFake(self._fake_term())
+        orig_open = TermSocket.open
+        orig_read = TermSocket.on_pty_read
+        try:
+            TermSocket.open = simulated_open  # the patch captures this as _original_open
             now = [1000.0]
             with mock.patch.object(EXT, 'patch_enabled', _patch_enabled), \
                     mock.patch.object(tornado.ioloop.IOLoop, 'current', return_value=FakeLoop()), \
                     mock.patch('time.monotonic', lambda: now[0]):
                 _install(mock.MagicMock())
-                TermSocket.open(FakeSock(self._fake_term()), '8')
-                TermSocket.open(FakeSock(self._fake_term()), '8')  # inside the window -> debounced
+                TermSocket.open(FakeSock(terminal), '1')  # first attach
+                assert callbacks == []
+                now[0] += EXT._BOUNCE_DEBOUNCE
+                TermSocket.open(FakeSock(terminal), '1')  # reattach after a page reload
+                assert [delay for delay, _ in callbacks] == [EXT._BOUNCE_DELAY]
+                now[0] += EXT._BOUNCE_DEBOUNCE
+                TermSocket.open(FakeSock(PtyWithClientsFake(self._fake_term())), '1')
                 assert len(callbacks) == 1
-                now[0] += 5.0                     # age past the debounce window
-                TermSocket.open(FakeSock(self._fake_term()), '9')  # bounces; prunes stale '8'
-                TermSocket.open(FakeSock(self._fake_term()), '8')  # '8' pruned -> treated as fresh
-                assert len(callbacks) == 3
         finally:
             TermSocket.open = orig_open
             TermSocket.on_pty_read = orig_read

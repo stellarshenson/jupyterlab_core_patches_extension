@@ -28,6 +28,11 @@ const STEPPED_SIZE = { type: 'set_size', content: [63, 176, 903, 1270] };
 const STDIN = { type: 'stdin', content: ['ls\r'] };
 
 /**
+ * The session name of a terminal that was running when the page loaded.
+ */
+const RESTORED_NAME = '1';
+
+/**
  * One registered `widgetAdded` handler.
  */
 type WidgetAddedHandler = (sender: unknown, widget: unknown) => void;
@@ -37,10 +42,10 @@ type WidgetAddedHandler = (sender: unknown, widget: unknown) => void;
  * tab. `refresh` is present so a test can assert the patch never reconnects
  * the session.
  */
-function fakeTerminal() {
+function fakeTerminal(name = RESTORED_NAME) {
   const send = jest.fn();
   const refresh = jest.fn(() => Promise.resolve());
-  const session: any = { send };
+  const session: any = { send, name };
   const terminal: any = {
     node: document.createElement('div'),
     session,
@@ -111,13 +116,56 @@ function createRegistry(
 }
 
 /**
- * Activate the plugin against the stand-in tracker and registry.
+ * An app stand-in whose terminal manager lists `names` as the sessions running
+ * when the page loaded. `change` emits a new running list, as a poll does.
+ */
+function createApp(names: string[] = [RESTORED_NAME]): {
+  app: JupyterFrontEnd;
+  change: (names: string[]) => void;
+} {
+  const runningChanged = new Signal<object, { name: string }[]>({});
+  const terminals = {
+    ready: Promise.resolve(),
+    running: () => names.map(name => ({ name }))[Symbol.iterator](),
+    runningChanged
+  };
+  return {
+    app: { serviceManager: { terminals } } as unknown as JupyterFrontEnd,
+    change: next => runningChanged.emit(next.map(name => ({ name })))
+  };
+}
+
+/**
+ * Activate the plugin against the stand-in app, tracker and registry.
  */
 async function activate(
   tracker: ITerminalTracker,
-  registry: ISettingRegistry | null = null
+  registry: ISettingRegistry | null = null,
+  app: JupyterFrontEnd = createApp().app
 ): Promise<void> {
-  await plugin.activate({} as JupyterFrontEnd, tracker, registry);
+  await plugin.activate(app, tracker, registry);
+}
+
+/**
+ * Fire `terminal` through the tracker, show it and send the fitted size; the
+ * sizes the session sent, including the restore after the step pause.
+ */
+function showThroughPlugin(
+  fire: (widget: unknown) => void,
+  name: string
+): unknown[][] {
+  jest.useFakeTimers();
+  try {
+    const { terminal, send } = fakeTerminal(name);
+    fire({ content: terminal });
+    terminal.session.send(UNFITTED_SIZE);
+    open(terminal);
+    terminal.session.send(FITTED_SIZE);
+    jest.advanceTimersByTime(120);
+    return send.mock.calls;
+  } finally {
+    jest.useRealTimers();
+  }
 }
 
 describe('terminal CPR escape plugin', () => {
@@ -167,6 +215,34 @@ describe('terminal CPR escape plugin', () => {
 
     expect(send.mock.calls).toEqual([[FITTED_SIZE], [STEPPED_SIZE]]);
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('steps a session that was running when the page loaded', async () => {
+    const { tracker, fire } = createTracker();
+    await activate(tracker, createRegistry(true));
+
+    expect(showThroughPlugin(fire, RESTORED_NAME)).toEqual([
+      [FITTED_SIZE],
+      [STEPPED_SIZE],
+      [FITTED_SIZE]
+    ]);
+  });
+
+  it('sends only the fitted size for a session the page started new', async () => {
+    const { tracker, fire } = createTracker();
+    await activate(tracker, createRegistry(true));
+
+    expect(showThroughPlugin(fire, '2')).toEqual([[FITTED_SIZE]]);
+  });
+
+  it('gives no step to a new session that reuses the name of a closed one', async () => {
+    const { tracker, fire } = createTracker();
+    const { app, change } = createApp();
+    await activate(tracker, createRegistry(true), app);
+    change([]);
+    change([RESTORED_NAME]);
+
+    expect(showThroughPlugin(fire, RESTORED_NAME)).toEqual([[FITTED_SIZE]]);
   });
 });
 

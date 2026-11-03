@@ -2,6 +2,13 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.21] - 2026-11-03
+
+### Fixed
+
+- A terminal whose session was not running when the page loaded, such as one the page starts new, gets its fitted size at its first show without the one-column repaint step
+- The server no longer steps a terminal session on its first attach; every later attach, the reattach after a page reload included, keeps the step, so the first command a new session runs, such as one a session bookmark sends, reads the full width
+
 ## [1.0.18] - 2026-10-31
 
 ### Changed

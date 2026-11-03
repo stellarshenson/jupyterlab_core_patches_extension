@@ -2,7 +2,7 @@
 
 Filters terminal query responses that appear as literal text when reconnecting
 to idle terminals, strips terminal queries from a buffer replay, and repaints a
-full-screen program after a client attaches. The frontend half holds back the
+full-screen program after a client reattaches. The frontend half holds back the
 size of an unopened xterm until its tab is first shown, so the PTY keeps its
 real size, then steps the PTY once so the running program repaints at the
 fitted size.
@@ -39,6 +39,9 @@ DEFAULTS = {
 # Set on TermSocket once the wrappers are in place, so a second
 # patch_term_socket call changes nothing.
 _PATCH_MARKER = "_jp_terminal_cpr_escape_patched"
+
+# Set on a terminado terminal at its first attach; only a later attach is stepped.
+_ATTACHED_MARKER = "_jp_terminal_cpr_escape_attached"
 
 logger = logging.getLogger(__name__)
 
@@ -354,6 +357,11 @@ def patch_term_socket(server_app):
                 del self.on_pty_read
             except AttributeError:
                 pass
+        # A first attach shows the session from its start, so there is nothing
+        # to repaint, and a step would make the session's first command read
+        # cols - 1. The mark is on the terminal object, not on its reusable name.
+        reattach = getattr(self.terminal, _ATTACHED_MARKER, False)
+        setattr(self.terminal, _ATTACHED_MARKER, True)
         if patch_enabled(server_app, REDRAW_OPTION):
             key = self.term_name
             now = time.monotonic()
@@ -366,12 +374,13 @@ def patch_term_socket(server_app):
                 ]:
                     del _last_bounce[stale]
                 _last_bounce[key] = now
-                IOLoop.current().call_later(
-                    _BOUNCE_DELAY,
-                    _make_winsize_bounce(
-                        self.terminal.ptyproc, IOLoop.current().call_later
-                    ),
-                )
+                if reattach:
+                    IOLoop.current().call_later(
+                        _BOUNCE_DELAY,
+                        _make_winsize_bounce(
+                            self.terminal.ptyproc, IOLoop.current().call_later
+                        ),
+                    )
 
     TermSocket.open = _patched_open
     if DEFAULTS["suppress_buffer_replay"]:

@@ -29,8 +29,9 @@ const REDRAW_OPTION = 'redrawBackgroundTerminals';
  * The filtering of terminal query responses happens server-side in
  * `jupyter_server_terminals`. This plugin handles terminals whose xterm is not
  * opened yet (a background tab after a page load): such a terminal sends no
- * size to the server; at its first show the widget sends the fitted size and
- * the hold steps the PTY once, so the running program repaints at it.
+ * size to the server; at its first show the widget sends the fitted size and,
+ * for a session that was running when the page loaded, the hold steps the PTY
+ * once, so the running program repaints at it.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
   id: '@stellarshenson/jupyterlab-core-patches-extension:terminal-cpr-escape',
@@ -39,7 +40,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
   autoStart: true,
   optional: [ITerminalTracker, ISettingRegistry],
   activate: async (
-    _app: JupyterFrontEnd,
+    app: JupyterFrontEnd,
     tracker: ITerminalTracker | null,
     settingRegistry: ISettingRegistry | null
   ): Promise<void> => {
@@ -75,8 +76,27 @@ const plugin: JupyterFrontEndPlugin<void> = {
     const isEnabled = () =>
       settings === null || (settings.get(REDRAW_OPTION).composite as boolean);
 
+    const terminals = app.serviceManager.terminals;
+    /**
+     * Sessions running when the page loaded that have stayed in the running
+     * list since. The page started every other session new: its program has
+     * drawn nothing at an older size, so it gets the fitted size and no step.
+     */
+    let restored = new Set<string>();
+    terminals.ready
+      .then(() => {
+        restored = new Set(Array.from(terminals.running(), ({ name }) => name));
+      })
+      // Rejects when the server has terminals turned off; no terminal opens.
+      .catch(() => undefined);
+    terminals.runningChanged.connect((_, models) => {
+      const names = models.map(({ name }) => name);
+      restored = new Set([...restored].filter(name => names.includes(name)));
+    });
+
     tracker.widgetAdded.connect((_, widget) => {
-      holdUntilOpened(widget.content, isEnabled);
+      const name = widget.content.session.name;
+      holdUntilOpened(widget.content, isEnabled, () => restored.has(name));
     });
   }
 };
