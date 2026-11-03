@@ -129,15 +129,15 @@ REPLAY_QUERY = re.compile(
     r"|\x1bP\$q[^\x1b]*\x1b\\"
 )
 
-# Repaint on attach: after a client attaches and the buffer replay drains, set
-# the PTY one column narrower and back so the kernel delivers SIGWINCH and the
-# foreground app repaints its full screen. A column step, not a row step: a
-# program that addresses rows absolutely takes a taller PTY as truth and loses
-# the line it commits during the step. One column narrower, not wider: a
-# program that writes to the last column wraps when the PTY is wider. No step
-# while the foreground process group is one shell alone (a shell at its
-# prompt); a shell with a child in its own process group runs a program
-# without job control and is stepped.
+# Repaint on attach: after a client reattaches and the buffer replay drains (a
+# first attach is not stepped), set the PTY one column narrower and back so the
+# kernel delivers SIGWINCH and the foreground app repaints its full screen. A
+# column step, not a row step: a program that addresses rows absolutely takes a
+# taller PTY as truth and loses the line it commits during the step. One column
+# narrower, not wider: a program that writes to the last column wraps when the
+# PTY is wider. No step while the foreground process group is one shell alone
+# (a shell at its prompt); a shell with a child in its own process group runs a
+# program without job control and is stepped.
 _BOUNCE_DELAY = 0.4  # let client geometry settle before the step
 _BOUNCE_STEP = 0.12  # pause between the narrow write and the restore
 _BOUNCE_DEBOUNCE = 5.0  # min seconds between steps on the same terminal
@@ -328,7 +328,9 @@ def patch_term_socket(server_app):
     from tornado.ioloop import IOLoop
 
     _original_open = TermSocket.open
-    _last_bounce = {}  # terminal name -> monotonic time of last step
+    # terminal name -> monotonic time of the last attach that passed the
+    # debounce, stepped or not
+    _last_bounce = {}
 
     def _replay_steps(text, ptyproc=None):
         if DEFAULTS["strip_replay_queries"]:
