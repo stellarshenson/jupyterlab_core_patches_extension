@@ -2,6 +2,12 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.23] - 2026-11-06
+
+### Changed
+
+- No code change since 1.0.22: this release publishes the same web tab scroll patch and terminal-CPR repair with the changelog and journal committed
+
 ## [1.0.22] - 2026-11-06
 
 ### Added

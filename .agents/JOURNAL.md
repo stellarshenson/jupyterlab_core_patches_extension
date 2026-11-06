@@ -117,3 +117,6 @@ This journal tracks substantive work on documents, diagrams, and documentation c
 
 38. **Task - release 1.0.22** (v1.0.22): publish the web tab scroll patch<br>
     **Result**: `make publish` raises 1.0.21 to 1.0.22. The release carries the eleventh patch, `jupyterlab_web_switch_tab_scrolling_fix`: it records a same-origin iframe's visible offset, restores it on tab reselect, on the frame load event and from a per-widget hide snapshot, and keeps it per URL in sessionStorage for a page reload. Six criteria closed (ACC-PATCH-23 to 28); the headed suite runs under xvfb in CI, the only mode that shows the reset. Gate before the release: Jest 120, pytest 186, headed suite 22/22, adversarial review round 6 SHIP.
+
+39. **Task - release 1.0.23** (v1.0.23): publish the 1.0.22 work with the release records committed<br>
+    **Result**: `make publish` raises 1.0.22 to 1.0.23. No code change since 1.0.22: the release republishes the eleventh patch `jupyterlab_web_switch_tab_scrolling_fix` - visible iframe offset recorded, restored on tab reselect, frame load and the per-widget hide snapshot, kept per URL in sessionStorage - and the terminal-CPR repair unchanged, with the changelog and journal committed. Gate before the release: Jest 120, pytest 186, headed suite 22/22 with the switch on and off; adversarial review round 6 SHIP. 0 open criteria, 0 open defects.
