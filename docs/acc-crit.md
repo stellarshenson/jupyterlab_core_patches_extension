@@ -1,6 +1,6 @@
 # Acceptance Criteria
 
-Behaviour the core-patches extension must show. One labextension entry carries ten plugins; every patch has one settings switch, default `true`; a switch set to `false` leaves the stock JupyterLab behaviour in place.
+Behaviour the core-patches extension must show. One labextension entry carries every patch plugin; every patch has one settings switch, default `true`; a switch set to `false` leaves the stock JupyterLab behaviour in place.
 
 ## Authors
 
@@ -8,17 +8,20 @@ Behaviour the core-patches extension must show. One labextension entry carries t
 
 ## Extension shape `CORE`
 
-One labextension entry, one settings schema and the plugin ids that carry the ten patches.
+One labextension entry, one settings schema and the plugin ids that carry the patches.
 
 - log: 2026-10-29T07:56:35Z @kj category created
+- log: 2026-11-05T23:41:26Z @kj description "One labextension entry, one settings schema and the plugin ids that carry the ten patches." -> "One labextension entry, one settings schema and the plugin ids that carry the patches."
 
-- [x] `ACC-CORE-1-ENTRY` **One entry, ten patches** - HIGH; One labextension entry; schema/plugin.json holds ten booleans, all default true; each patch plugin id is @stellarshenson/jupyterlab-core-patches-extension:<slug>, so a disable of the package reaches it.
+- [x] `ACC-CORE-1-ENTRY` **One entry, eleven patches** - HIGH; One labextension entry; schema/plugin.json holds one boolean per patch, all default true; each patch plugin id is @stellarshenson/jupyterlab-core-patches-extension:<slug>, so a disable of the package reaches it.
   - evidence: Galata activation.spec 20/20; pytest test_extension.py 3 passed; schema 10 booleans, built labextension identical (verify2.json)
-  - test: ui-tests/tests/activation.spec.ts checks the entry; jupyterlab_core_patches_extension/tests/test_extension.py checks ten schema booleans
+  - test: ui-tests/tests/activation.spec.ts checks the entry; jupyterlab_core_patches_extension/tests/test_extension.py checks the schema lists every patch switch
   - test-tags: FUNCTIONAL, UNIT
   - log: 2026-10-29T07:56:35Z @kj added
   - log: 2026-10-29T09:40:12Z @kj closed
   - log: 2026-10-31T16:27:22Z @kj edited text "One labextension entry; schema/plugin.json holds ten booleans, all default true; each patch plugin keeps its old package name as its id." -> "One labextension entry; schema/plugin.json holds ten booleans, all default true; each patch plugin id is @stellarshenson/jupyterlab-core-patches-extension:<slug>, so a disable of the package reaches it."; reason: jupyter labextension disable of the package left the ten patches active under the old ids
+  - log: 2026-11-05T23:41:26Z @kj amended title "One entry, ten patches" -> "One entry, eleven patches"; text "One labextension entry; schema/plugin.json holds ten booleans, all default true; each patch plugin id is @stellarshenson/jupyterlab-core-patches-extension:<slug>, so a disable of the package reaches it." -> "One labextension entry; schema/plugin.json holds one boolean per patch, all default true; each patch plugin id is @stellarshenson/jupyterlab-core-patches-extension:<slug>, so a disable of the package reaches it."
+  - log: 2026-11-05T23:41:26Z @kj edited test "ui-tests/tests/activation.spec.ts checks the entry; jupyterlab_core_patches_extension/tests/test_extension.py checks ten schema booleans" -> "ui-tests/tests/activation.spec.ts checks the entry; jupyterlab_core_patches_extension/tests/test_extension.py checks the schema lists every patch switch"
 - [x] `ACC-CORE-2-ACTIVATE` **Activation message** - MEDIUM; The main plugin logs JupyterLab extension @stellarshenson/jupyterlab-core-patches-extension is activated! exactly once on page load.
   - evidence: Galata activation.spec asserts exactly 1 activation message; 20 passed (galata.json)
   - test: ui-tests/tests/activation.spec.ts filters console messages and asserts length 1
@@ -39,12 +42,13 @@ One labextension entry, one settings schema and the plugin ids that carry the te
   - test-tags: UNIT, INTEGRATION
   - log: 2026-10-29T07:56:35Z @kj added
   - log: 2026-10-29T09:40:12Z @kj closed
-- [x] `ACC-CORE-5-DOCS` **README tally and per-fix pages** - MEDIUM; README lists all ten patches and links one docs/<slug>.md page per patch; each page states the switch, plugin id, patched member, guard, source and tests.
+- [x] `ACC-CORE-5-DOCS` **README tally and per-fix pages** - MEDIUM; README lists every patch and links one docs/<slug>.md page per patch; each page states the switch, plugin id, patched member, guard, source and tests.
   - evidence: pytest test_docs.py 2 passed; README links all ten pages
   - test: jupyterlab_core_patches_extension/tests/test_docs.py
   - test-tags: UNIT
   - log: 2026-10-29T07:56:35Z @kj added
   - log: 2026-10-29T09:40:12Z @kj closed
+  - log: 2026-11-05T23:41:26Z @kj amended text "README lists all ten patches and links one docs/<slug>.md page per patch; each page states the switch, plugin id, patched member, guard, source and tests." -> "README lists every patch and links one docs/<slug>.md page per patch; each page states the switch, plugin id, patched member, guard, source and tests."
 
 ## Patch toggles `PATCH`
 
@@ -161,3 +165,39 @@ One settings switch per patch; false returns before patching; all default true.
   - log: 2026-11-03T09:24:12Z @kj added
   - log: 2026-11-03T09:29:23Z @kj edited test "pytest jupyterlab_core_patches_extension/tests/test_terminal_cpr_escape.py asserts the first attach of a terminal schedules no step and a later attach of the same terminal schedules the step; the cold session-bookmark trace with a shell that waits 0.3 s reads no column less" -> "pytest jupyterlab_core_patches_extension/tests/test_terminal_cpr_escape.py test_no_step_on_first_attach asserts the first attach of a terminal schedules no step, a later attach of the same terminal schedules it and a new terminal under a reused name does not; the cold session-bookmark trace with a shell that waits 0.45 s reads no column less"; reason: a shell that waits 0.3 s reads before the step window, so that trace cannot fail; 0.45 s puts the read in the window
   - log: 2026-11-03T09:31:05Z @kj closed; reason: closed on the pytest and the cold trace; Galata not run
+- [x] `ACC-PATCH-23-WEB-SCROLL` **Web tab scrolling switch** - HIGH; jupyterlab_web_switch_tab_scrolling_fix defaults true; false leaves an iframe tab at the top on reselect, refresh and page reload; a change applies on page reload
+  - evidence: headed suite 22/22: switch-off reselect reads 0; served schema has the switch default true; Jest 15/15 web-switch, 120/120 suite
+  - test: schema read asserts default true; with the switch false no restore handler runs
+  - test-tags: UNIT
+  - log: 2026-11-05T22:35:57Z @kj added
+  - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
+- [x] `ACC-PATCH-24-TAB-RESELECT` **Scroll kept on tab reselect** - CRITICAL; a same-origin iframe scrolled to 900 keeps 900 when its tab is reselected
+  - evidence: headed spec:225 passed in 9.6 s: hidden frame 0, reactivated tab reads 900
+  - test: ui-tests/tests/web-switch-tab-scrolling.spec.ts: scroll the proxy iframe to 900, activate another tab, return, assert scrollY 900
+  - test-tags: FUNCTIONAL, UNIT
+  - log: 2026-11-05T22:35:57Z @kj added
+  - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
+- [x] `ACC-PATCH-25-FRAME-REFRESH` **Scroll kept on iframe refresh** - HIGH; an iframe document that reloads returns to its previous scroll position
+  - evidence: headed spec frame-reload step reads 900 after location.reload; Jest clamp tests green
+  - test: jlpm jest web-switch-tab-scrolling: scroll to 900, reload the frame, assert scrollY 900
+  - test-tags: UNIT
+  - log: 2026-11-05T22:35:57Z @kj added
+  - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
+- [x] `ACC-PATCH-26-PAGE-RELOAD` **Scroll kept on page reload** - MEDIUM; after a full JupyterLab page reload, an iframe tab reopens at its previous scroll position
+  - evidence: headed spec page-reload step reads 900 after page.reload and reopen; Jest sessionStorage test green
+  - test: Galata: open the iframe, scroll to 900, reload the page, open the tab, assert scrollY 900
+  - test-tags: FUNCTIONAL, UNIT
+  - log: 2026-11-05T22:35:57Z @kj added
+  - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
+- [x] `ACC-PATCH-27-USER-SCROLL` **User scroll ends restore** - MEDIUM; a wheel or touch scroll during the restore stops it and keeps the user's position
+  - evidence: Jest wheel-guard tests green: 15/15 web-switch, 120/120 suite
+  - test: jlpm jest web-switch-tab-scrolling: dispatch wheel during the guard, assert the guard stops and scrollY stays
+  - test-tags: UNIT
+  - log: 2026-11-05T22:35:57Z @kj added
+  - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
+- [x] `ACC-PATCH-28-CROSS-ORIGIN` **Cross-origin frame skipped** - MEDIUM; a cross-origin iframe is skipped without a thrown error
+  - evidence: Jest cross-origin skip test green: 120/120 suite
+  - test: jlpm jest web-switch-tab-scrolling: a frame whose document throws on access is skipped, no console error
+  - test-tags: UNIT
+  - log: 2026-11-05T22:35:57Z @kj added
+  - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate

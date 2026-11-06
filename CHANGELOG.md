@@ -2,6 +2,17 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.22] - 2026-11-06
+
+### Added
+
+- A web tab keeps its scroll position across a tab switch, a frame refresh and a page reload; the new `jupyterlab_web_switch_tab_scrolling_fix` switch, on by default, records the visible offset, restores it on reselect, on the frame load and from a per-widget hide snapshot, and keeps it per URL in sessionStorage for a page reload; same-origin frames only
+- The ui-tests suite runs headed under xvfb with full Chromium in CI, because only a headed browser resets the frame scroll this patch restores
+
+### Changed
+
+- The README, the plugin description and the schema list eleven patches
+
 ## [1.0.21] - 2026-11-03
 
 ### Fixed

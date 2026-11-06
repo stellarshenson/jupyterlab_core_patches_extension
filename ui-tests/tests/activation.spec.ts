@@ -10,7 +10,8 @@ const PATCH_KEYS = [
   'jupyterlab_other_file_type_menu_fix',
   'jupyterlab_restore_terminals_fix',
   'jupyterlab_server_proxy_launcher_fix',
-  'jupyterlab_terminal_cpr_escape_fix'
+  'jupyterlab_terminal_cpr_escape_fix',
+  'jupyterlab_web_switch_tab_scrolling_fix'
 ];
 
 test.use({ autoGoto: false });

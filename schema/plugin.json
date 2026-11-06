@@ -63,6 +63,12 @@
       "description": "Filter CPR escape text from idle terminal output.",
       "default": true
     },
+    "jupyterlab_web_switch_tab_scrolling_fix": {
+      "type": "boolean",
+      "title": "Web tab scrolling",
+      "description": "Keep the scroll position of a web tab across a tab switch and a refresh.",
+      "default": true
+    },
     "redrawBackgroundTerminals": {
       "type": "boolean",
       "title": "Redraw background terminals",

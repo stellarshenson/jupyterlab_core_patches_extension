@@ -15,6 +15,7 @@ import otherFileTypeMenu from './fixes/other-file-type-menu';
 import restoreTerminals from './fixes/restore-terminals';
 import serverProxyLauncher from './fixes/server-proxy-launcher';
 import terminalCprEscape from './fixes/terminal-cpr-escape';
+import webSwitchTabScrolling from './fixes/web-switch-tab-scrolling';
 import { CORE_PATCHES_ID } from './patches';
 
 /**
@@ -23,7 +24,7 @@ import { CORE_PATCHES_ID } from './patches';
 const corePatches: JupyterFrontEndPlugin<void> = {
   id: CORE_PATCHES_ID,
   description:
-    'One JupyterLab extension carrying ten upstream core patches, each switchable from Settings',
+    'One JupyterLab extension carrying eleven upstream core patches, each switchable from Settings',
   autoStart: true,
   optional: [ISettingRegistry],
   activate: async (
@@ -63,5 +64,6 @@ export default [
   otherFileTypeMenu,
   restoreTerminals,
   serverProxyLauncher,
-  terminalCprEscape
+  terminalCprEscape,
+  webSwitchTabScrolling
 ];

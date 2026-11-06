@@ -125,7 +125,7 @@ jobs:
     - name: Install the extension
       run: |
         set -eux
-        python -m pip install "jupyterlab>=4.6,<5" jupyterlab_core_patches_extension*.whl
+        python -m pip install "jupyterlab>=4.6,<5" "jupyter-server-proxy>=4.6,<5" jupyterlab_core_patches_extension*.whl
 
     - name: Install dependencies
       working-directory: ui-tests
@@ -144,13 +144,13 @@ jobs:
     - name: Install browser
       run: |
         set -eux
-        jlpm playwright install chromium --only-shell
+        jlpm playwright install chromium
       working-directory: ui-tests
 
     - name: Execute integration tests
       working-directory: ui-tests
       run: |
-        jlpm playwright test
+        xvfb-run -a jlpm playwright test --headed
 
     - name: Upload Playwright Test report
       if: always()

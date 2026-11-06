@@ -15,6 +15,7 @@ PATCH_KEYS = [
     "jupyterlab_restore_terminals_fix",
     "jupyterlab_server_proxy_launcher_fix",
     "jupyterlab_terminal_cpr_escape_fix",
+    "jupyterlab_web_switch_tab_scrolling_fix",
 ]
 
 
@@ -33,7 +34,7 @@ def test_server_extension_points():
     ]
 
 
-def test_settings_schema_has_ten_switches():
+def test_settings_schema_lists_every_switch():
     schema = json.loads(
         (PROJECT_ROOT / "schema" / "plugin.json").read_text(encoding="utf-8")
     )

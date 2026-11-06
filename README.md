@@ -8,7 +8,7 @@
 [![Brought To You By KOLOMOLO](https://img.shields.io/badge/Brought%20To%20You%20By-KOLOMOLO-00ffff?style=flat)](https://kolomolo.com)
 [![Donate PayPal](https://img.shields.io/badge/Donate-PayPal-blue?style=flat)](https://www.paypal.com/donate/?hosted_button_id=B4KPBJDLLXTSA)
 
-One JupyterLab 4 extension carrying ten core patches for the file browser, notebooks, Markdown and terminals.
+One JupyterLab 4 extension carrying eleven core patches for the file browser, notebooks, Markdown, terminals and web tabs.
 
 Every patch has one switch in Settings, all on by default. A switch change applies on the next page reload.
 
@@ -36,6 +36,7 @@ pip uninstall jupyterlab_change_ui_font_size_fix jupyterlab_file_browser_column_
 | [Restore terminals](docs/restore-terminals.md)                  | After a server restart, a restored terminal starts at the server root instead of its last folder                                                          | Reports open terminal names to the server, which stores each folder and re-creates the saved terminals before a browser connects                                                                              |
 | [Server proxy launcher](docs/server-proxy-launcher.md)          | A server-proxy launcher in a custom category shows no icon                                                                                                | Fetches `/server-proxy/servers-info` once and wraps `app.commands.icon` to answer `server-proxy:open` from an icon cache                                                                                      |
 | [Terminal CPR escape](docs/terminal-cpr-escape.md)              | A terminal running a full-screen program shows a scrambled TUI, raw escape text, a blank screen at first show or the wrong width                          | Wraps `TermSocket.on_pty_read` and `TermSocket.open` to filter response forms and strip replay queries, and steps the PTY once at a restored terminal's first show so the program repaints at the fitted size |
+| [Web tab scrolling](docs/web-switch-tab-scrolling.md)           | An iframe tab shows the top of its document after a tab switch, a frame refresh or a page reload in a headed browser                                      | Records the frame scroll while it is visible, restores it on activation and frame load, and keeps it in sessionStorage for a page reload                                                                      |
 
 ## Why one extension
 
@@ -57,7 +58,7 @@ flowchart LR
     subgraph NEW["After - one extension"]
         direction TB
         ONE[1 extension<br/>1 labextension entry<br/>1 settings schema<br/>1 Extension Manager row<br/>1 federated bundle<br/>1 release per JupyterLab change]:::ui
-        PLUG[10 patch plugins<br/>1 switch each<br/>plugin ids under the package name]:::ui
+        PLUG[11 patch plugins<br/>1 switch each<br/>plugin ids under the package name]:::ui
         ONE --> PLUG
     end
     TEN --> ONE

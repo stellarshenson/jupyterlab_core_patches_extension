@@ -1,0 +1,1 @@
+- 2026-11-05T23:41:28Z @kj acc-crit.md 1aaf98f8 sha256:ac8367944d0a1bfa3ba5762f761db3148b3f4740bb17e5de32a39f72d2747606: the tracker preamble carries a present-tense patch count that pm-tools describe cannot reach

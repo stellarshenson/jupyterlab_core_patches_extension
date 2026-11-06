@@ -12,6 +12,7 @@ SLUGS = [
     "restore-terminals",
     "server-proxy-launcher",
     "terminal-cpr-escape",
+    "web-switch-tab-scrolling",
 ]
 REQUIRED_LABELS = [
     "**Switch**",
