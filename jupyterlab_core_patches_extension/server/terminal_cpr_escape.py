@@ -18,6 +18,8 @@ import re
 import time
 from collections import Counter
 
+from tornado.websocket import WebSocketClosedError
+
 from jupyterlab_core_patches_extension.settings import patch_enabled
 
 # The switch key in the shared settings schema. The frontend plugin gates on
@@ -320,7 +322,13 @@ def patch_term_socket(server_app):
             _accum["matched"].extend(matched)
         if time.monotonic() - _accum["last_flush"] >= _LOG_INTERVAL:
             _flush_log()
-        _original_on_pty_read(self, filtered)
+        try:
+            _original_on_pty_read(self, filtered)
+        except WebSocketClosedError:
+            # the socket closed between the pty read and the write; terminado
+            # removes the client in on_close; skipping keeps the loop
+            # delivering to the remaining clients.
+            pass
 
     TermSocket.on_pty_read = _filtered_on_pty_read
     patches = ["CPR filter"]

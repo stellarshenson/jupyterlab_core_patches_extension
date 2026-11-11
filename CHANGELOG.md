@@ -2,6 +2,13 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.24] - 2026-11-11
+
+### Fixed
+
+- A closed terminal WebSocket no longer stops output delivery to the remaining clients: the CPR wrapper contains WebSocketClosedError from the original on_pty_read handler so terminado's client loop continues; the switch-off path keeps stock behaviour
+- Four pytest tests cover the guard: a closed client is skipped, other errors still propagate, the switch-off path is unchanged, and all-closed clients raise nothing
+
 ## [1.0.23] - 2026-11-06
 
 ### Changed

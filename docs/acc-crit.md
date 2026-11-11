@@ -201,3 +201,28 @@ One settings switch per patch; false returns before patching; all default true.
   - test-tags: UNIT
   - log: 2026-11-05T22:35:57Z @kj added
   - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
+- [x] `ACC-PATCH-29-SKIP-CLOSED` **Closed terminal socket skipped** - HIGH; a closed WebSocket client raises WebSocketClosedError and the remaining clients still receive the chunk in the same pty read.
+  - evidence: pytest -k closed_client_does_not_block_later_clients: 4-test selection passed; the test fails on a pre-change HEAD copy with WebSocketClosedError and passes with the guard; whole file 155 passed, make test pytest 190 passed
+  - test: pytest -k closed_client_does_not_block_later_clients: two fake clients, the first raises WebSocketClosedError, assert the second receives the chunk.
+  - test-tags: UNIT
+  - mechanism: 2026-11-11T17:42:44Z @kj one try/except WebSocketClosedError around the original TermSocket.on_pty_read call, per client, so terminado's pty_read loop continues to the next client.
+  - log: 2026-11-11T17:42:44Z @kj added
+  - log: 2026-11-11T18:05:45Z @kj closed: guard shipped in round 1
+- [x] `ACC-PATCH-30-KEEP-ERRORS` **Unexpected delivery error propagates** - MEDIUM; an exception other than WebSocketClosedError raised by a client's delivery is not caught and still reaches the caller.
+  - evidence: pytest -k unexpected_error_propagates passed: RuntimeError 'delivery failed' escapes the handler; whole file 155 passed, make test pytest 190 passed
+  - test: pytest -k unexpected_error_propagates: a fake client raises RuntimeError, assert TermSocket.on_pty_read raises it.
+  - test-tags: UNIT
+  - log: 2026-11-11T17:42:44Z @kj added
+  - log: 2026-11-11T18:05:46Z @kj closed: guard shipped in round 1
+- [x] `ACC-PATCH-31-SWITCH-OFF` **Switch off keeps stock delivery** - MEDIUM; with jupyterlab_terminal_cpr_escape_fix false the wrapper calls the original handler and a closed client's WebSocketClosedError propagates as in stock terminado.
+  - evidence: pytest -k closed_error_propagates_when_switch_off passed: switch off lets WebSocketClosedError escape; whole file 155 passed, make test pytest 190 passed
+  - test: pytest -k closed_error_propagates_when_switch_off: settings switch false, a fake client raises WebSocketClosedError, assert it propagates.
+  - test-tags: UNIT
+  - log: 2026-11-11T17:42:44Z @kj added
+  - log: 2026-11-11T18:05:46Z @kj closed: guard shipped in round 1
+- [x] `ACC-PATCH-32-ALL-CLOSED` **All clients closed** - LOW; when every client in the list is closed, a pty read call raises nothing.
+  - evidence: pytest -k all_closed_clients_do_not_raise passed; the test fails on the pre-change HEAD copy; whole file 155 passed, make test pytest 190 passed
+  - test: pytest -k all_closed_clients_do_not_raise: two fake clients both raise WebSocketClosedError, assert no exception escapes.
+  - test-tags: UNIT
+  - log: 2026-11-11T17:42:44Z @kj added
+  - log: 2026-11-11T18:05:46Z @kj closed: guard shipped in round 1

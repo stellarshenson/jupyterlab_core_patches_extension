@@ -18,6 +18,7 @@ from unittest import mock
 import pytest
 import tornado.ioloop
 from jupyter_server_terminals.handlers import TermSocket
+from tornado.websocket import WebSocketClosedError
 
 EXT = importlib.import_module(
     "jupyterlab_core_patches_extension.server.terminal_cpr_escape"
@@ -1309,5 +1310,65 @@ class TestPatchedOpen:
     def test_private_cpr_removed_from_live_and_replay(self):
         assert _attach(['a\x1b[?52;1R', 'b']) == ['ab']
         assert _attach(['a'], live=['live\x1b[?52;1R']) == ['a', 'live']
+
+
+class TestClosedClientDelivery:
+    """A closed client socket must not stop delivery to the other clients.
+
+    terminado's TermManager.pty_read loops over the terminal's clients and
+    calls on_pty_read on each with no per-client guard, so an exception from
+    one client aborts the loop. The enabled path must contain only
+    WebSocketClosedError; the switch-off path keeps stock terminado behavior.
+    """
+
+    class _Client(TermSocket):
+        """Shaped for terminado's loop: a write records the frame or raises."""
+
+        def __init__(self, error=None):
+            self.error = error
+            self.frames = []
+            self._enable_output_logging = False
+
+        def write_message(self, message, binary=False):
+            if self.error is not None:
+                raise self.error
+            self.frames.append(json.loads(message))
+
+    def _deliver(self, *clients, text='chunk'):
+        """Simulate terminado's loop: the wrapped class handler runs per client."""
+        for client in clients:
+            TermSocket.on_pty_read(client, text)
+
+    def test_closed_client_does_not_block_later_clients(self):
+        """The client after a closed one still receives the chunk."""
+        closed, live = self._Client(WebSocketClosedError()), self._Client()
+        with mock.patch.object(EXT, 'patch_enabled', _patch_enabled):
+            _install(mock.MagicMock())
+            self._deliver(closed, live)
+        assert live.frames == [['stdout', 'chunk']]
+
+    def test_unexpected_error_propagates(self):
+        """Only WebSocketClosedError is contained; any other error escapes."""
+        client = self._Client(RuntimeError('delivery failed'))
+        with mock.patch.object(EXT, 'patch_enabled', _patch_enabled):
+            _install(mock.MagicMock())
+            with pytest.raises(RuntimeError, match='delivery failed'):
+                TermSocket.on_pty_read(client, 'chunk')
+
+    def test_closed_error_propagates_when_switch_off(self):
+        """Switch off: stock terminado, the error reaches the pty loop."""
+        client = self._Client(WebSocketClosedError())
+        with mock.patch.object(EXT, 'patch_enabled', _patch_enabled), \
+                mock.patch.dict(ENABLED, {EXT.SWITCH_KEY: False}):
+            _install(mock.MagicMock())
+            with pytest.raises(WebSocketClosedError):
+                TermSocket.on_pty_read(client, 'chunk')
+
+    def test_all_closed_clients_do_not_raise(self):
+        """Two closed clients: the chunk loop completes with no exception."""
+        clients = [self._Client(WebSocketClosedError()) for _ in range(2)]
+        with mock.patch.object(EXT, 'patch_enabled', _patch_enabled):
+            _install(mock.MagicMock())
+            self._deliver(*clients)
 
 
