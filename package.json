@@ -1,6 +1,6 @@
 {
     "name": "@stellarshenson/jupyterlab-core-patches-extension",
-    "version": "1.0.23",
+    "version": "1.0.24",
     "description": "One JupyterLab extension carrying eleven upstream core patches, each switchable from Settings",
     "keywords": [
         "jupyter",
