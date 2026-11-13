@@ -36,3 +36,10 @@ Wrong behaviour of one of the eleven patches in ordinary use
   - test-tags: MANUAL
   - log: 2026-11-13T06:59:27Z @kj added
   - log: 2026-11-13T07:00:01Z @kj rejected: rejected: 4.1 ms per 64 KB is not seen in ordinary terminal use; one combined pattern would change the ported filter
+- [x] `DEF-PATCH-5-SWITCHDIR` **Server halves read the switches from a folder JupyterLab does not write** - MAJOR; A user who turns off the restore-terminals switch, the terminal CPR escape switch or its redraw option still gets the server half of that patch, because the server reads the switch file under the Jupyter data folder while JupyterLab writes it under the config folder.
+  - evidence: pytest jupyterlab_core_patches_extension/tests/test_settings.py::test_server_app_reads_the_folder_jupyterlab_writes passes: a real ServerApp reads the switch as false from the folder JupyterLab writes
+  - repro: Set jupyterlab_restore_terminals_fix to false in Settings, restart the server: the saved terminals are still re-created
+  - test-tags: UNIT
+  - root-cause: 2026-11-13T07:38:14Z @kj settings.py _settings_path fell back to jupyter_data_dir()/lab/user-settings because ServerApp has no user_settings_dir attribute; JupyterLab stores user settings in LabApp.user_settings_dir (~/.jupyter/lab/user-settings)
+  - log: 2026-11-13T07:38:14Z @kj added
+  - log: 2026-11-13T07:38:34Z @kj closed

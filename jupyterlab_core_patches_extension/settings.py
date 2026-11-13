@@ -18,11 +18,20 @@ _LOCK = threading.Lock()
 def _settings_path(server_app) -> Path:
     user_settings_dir = getattr(server_app, "user_settings_dir", None)
     if user_settings_dir is None:
-        from jupyter_core.paths import jupyter_data_dir
-
-        user_settings_dir = os.path.join(
-            jupyter_data_dir(), "lab", "user-settings"
-        )
+        # The ServerApp has no such attribute; the loaded JupyterLab has it
+        manager = getattr(server_app, "extension_manager", None)
+        lab_apps = manager.extension_apps.get("jupyterlab", set()) if manager else ()
+        for app in lab_apps:
+            user_settings_dir = getattr(app, "user_settings_dir", None)
+            if user_settings_dir:
+                break
+    if not user_settings_dir:
+        try:
+            from jupyterlab.commands import get_user_settings_dir
+        except ImportError:
+            # No JupyterLab, so no switch was stored: every read returns the default
+            return Path(os.devnull)
+        user_settings_dir = get_user_settings_dir()
     return Path(user_settings_dir) / PACKAGE / "plugin.jupyterlab-settings"
 
 

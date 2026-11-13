@@ -29,6 +29,15 @@ def test_false_switch_reads_false(tmp_path):
     assert patch_enabled(app, KEY) is False
 
 
+def test_server_app_reads_the_folder_jupyterlab_writes(tmp_path, monkeypatch):
+    from jupyter_server.serverapp import ServerApp
+
+    monkeypatch.setenv("JUPYTERLAB_SETTINGS_DIR", str(tmp_path))
+    _write_settings(tmp_path, {KEY: False})
+
+    assert patch_enabled(ServerApp(), KEY) is False
+
+
 def test_other_keys_keep_their_default(tmp_path):
     app = SimpleNamespace(user_settings_dir=str(tmp_path))
     _write_settings(tmp_path, {KEY: False})
