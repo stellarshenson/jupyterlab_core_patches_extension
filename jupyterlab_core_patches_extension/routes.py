@@ -1,9 +1,10 @@
 """Compose the server halves of the core patches.
 
 Every patch module under :mod:`jupyterlab_core_patches_extension.server` may
-export any of three entry points: ``setup_handlers(web_app)`` registers its
-HTTP routes, ``prepopulate(server_app)`` does its startup work, and
-``patch_term_socket(server_app)`` wraps the terminal websocket handler. The
+export any of four entry points: ``setup_handlers(web_app)`` registers its
+HTTP routes, ``prepopulate(server_app)`` does its startup work,
+``patch_term_socket(server_app)`` wraps the terminal websocket handler, and
+``patch_contents_manager(server_app)`` wraps the contents manager. The
 modules are discovered and imported by name at runtime.
 """
 
@@ -49,7 +50,11 @@ def load_server_patches(server_app):
         server_app: The JupyterLab application being started
     """
     for module in _patch_modules():
-        for entry_point in ("prepopulate", "patch_term_socket"):
+        for entry_point in (
+            "prepopulate",
+            "patch_term_socket",
+            "patch_contents_manager",
+        ):
             callback = getattr(module, entry_point, None)
             if callback is not None:
                 callback(server_app)

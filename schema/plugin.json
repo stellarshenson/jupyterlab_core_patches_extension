@@ -15,6 +15,12 @@
       "description": "Recover stale cached file browser column widths before the stock clamp turns them negative.",
       "default": true
     },
+    "jupyterlab_file_delete_trash_fix": {
+      "type": "boolean",
+      "title": "File delete to trash",
+      "description": "Run a file browser delete to the trash off the server event loop, and move an item on another mount into that mount's trash folder by rename instead of a copy. A change applies at the next delete.",
+      "default": true
+    },
     "jupyterlab_jump_to_definition_fix": {
       "type": "boolean",
       "title": "Jump to definition",

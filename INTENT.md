@@ -19,6 +19,14 @@ Each source project sits beside this one under `/home/lab/workspace/private/jupy
 | jupyterlab_server_proxy_launcher_fix         | SVG icons of server-proxy launchers in custom categories             |
 | jupyterlab_terminal_cpr_escape_fix           | CPR escape text in idle terminals                                    |
 
+## Twelfth patch, added 2026-11-13
+
+| Fix                              | What it patches                                                                                                                                                |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| jupyterlab_file_delete_trash_fix | a file browser delete to the trash: the trash call runs off the server event loop, and an item on another mount moves into that mount's trash folder by rename |
+
+On 2026-11-13 a file browser delete of a 177 GB folder in the workspace left the lab without an answer for 14.5 minutes. jupyter_server 2.21.1 calls `send2trash` on the event loop in `AsyncFileContentsManager.delete_file`, and send2trash copied the folder into the home trash, because the workspace and the home folder are bind mounts of one disk with the same device number. The patch is server only: it has no source package and no frontend plugin, and its switch lives in the shared schema. It is an exception to "No new fixes" in the scope of the first milestone.
+
 ## Behaviour
 
 - One extension entry, one settings schema, ten plugins inside the package

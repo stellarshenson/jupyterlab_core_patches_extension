@@ -7,6 +7,7 @@ PROJECT_ROOT = Path(__file__).parents[2]
 PATCH_KEYS = [
     "jupyterlab_change_ui_font_size_fix",
     "jupyterlab_file_browser_column_width_fix",
+    "jupyterlab_file_delete_trash_fix",
     "jupyterlab_jump_to_definition_fix",
     "jupyterlab_markdown_switch_tab_scrolling_fix",
     "jupyterlab_markdown_syntax_rendering_fix",

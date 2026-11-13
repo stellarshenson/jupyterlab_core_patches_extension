@@ -4,6 +4,7 @@ PROJECT_ROOT = Path(__file__).parents[2]
 SLUGS = [
     "change-ui-font-size",
     "file-browser-column-width",
+    "file-delete-trash",
     "jump-to-definition",
     "markdown-switch-tab-scrolling",
     "markdown-syntax-rendering",

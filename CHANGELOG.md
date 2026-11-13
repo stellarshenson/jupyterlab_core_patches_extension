@@ -2,6 +2,18 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.31] - 2026-11-13
+
+### Added
+
+- A file-browser delete no longer stops the server from answering: the new `jupyterlab_file_delete_trash_fix` switch, on by default, runs the trash call in a worker thread under one lock and renames an item on another mount into that mount's `.Trash-<uid>` folder instead of copying it into the home trash
+- When the mount trash cannot be found or created, the delete falls back to the stock `send2trash`; a failed rename answers 400 and moves nothing
+
+### Changed
+
+- The README, the plugin description and the schema list twelve patches
+- The local Makefile follows the reference 1.49: `make publish` installs before it tests
+
 ## [1.0.28] - 2026-11-13
 
 ### Changed

@@ -24,7 +24,7 @@ import { CORE_PATCHES_ID } from './patches';
 const corePatches: JupyterFrontEndPlugin<void> = {
   id: CORE_PATCHES_ID,
   description:
-    'One JupyterLab extension carrying eleven upstream core patches, each switchable from Settings',
+    'One JupyterLab extension carrying twelve upstream core patches, each switchable from Settings',
   autoStart: true,
   optional: [ISettingRegistry],
   activate: async (

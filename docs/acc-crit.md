@@ -167,10 +167,11 @@ One settings switch per patch; false returns before patching; all default true.
   - log: 2026-11-03T09:31:05Z @kj closed; reason: closed on the pytest and the cold trace; Galata not run
 - [x] `ACC-PATCH-23-WEB-SCROLL` **Web tab scrolling switch** - HIGH; jupyterlab_web_switch_tab_scrolling_fix defaults true; false leaves an iframe tab at the top on reselect, refresh and page reload; a change applies on page reload
   - evidence: headed suite 22/22: switch-off reselect reads 0; served schema has the switch default true; Jest 15/15 web-switch, 120/120 suite
-  - test: schema read asserts default true; with the switch false no restore handler runs
+  - test: src/**tests**/web-switch-tab-scrolling.spec.ts 'declares a default-on switch and skips the patch when it is off'; Galata ui-tests/tests/web-switch-tab-scrolling.spec.ts 'leaves the frame at the top when the switch is off'
   - test-tags: UNIT
   - log: 2026-11-05T22:35:57Z @kj added
   - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
+  - log: 2026-11-13T21:21:20Z @kj edited test "schema read asserts default true; with the switch false no restore handler runs" -> "src/**tests**/web-switch-tab-scrolling.spec.ts 'declares a default-on switch and skips the patch when it is off'; Galata ui-tests/tests/web-switch-tab-scrolling.spec.ts 'leaves the frame at the top when the switch is off'"
 - [x] `ACC-PATCH-24-TAB-RESELECT` **Scroll kept on tab reselect** - CRITICAL; a same-origin iframe scrolled to 900 keeps 900 when its tab is reselected
   - evidence: headed spec:225 passed in 9.6 s: hidden frame 0, reactivated tab reads 900
   - test: ui-tests/tests/web-switch-tab-scrolling.spec.ts: scroll the proxy iframe to 900, activate another tab, return, assert scrollY 900
@@ -185,10 +186,11 @@ One settings switch per patch; false returns before patching; all default true.
   - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
 - [x] `ACC-PATCH-26-PAGE-RELOAD` **Scroll kept on page reload** - MEDIUM; after a full JupyterLab page reload, an iframe tab reopens at its previous scroll position
   - evidence: headed spec page-reload step reads 900 after page.reload and reopen; Jest sessionStorage test green
-  - test: Galata: open the iframe, scroll to 900, reload the page, open the tab, assert scrollY 900
+  - test: Galata ui-tests/tests/web-switch-tab-scrolling.spec.ts 'keeps the frame position across a tab switch, a frame reload and a page reload': scroll to 900, reload the page, assert scrollY 900
   - test-tags: FUNCTIONAL, UNIT
   - log: 2026-11-05T22:35:57Z @kj added
   - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
+  - log: 2026-11-13T21:21:21Z @kj edited test "Galata: open the iframe, scroll to 900, reload the page, open the tab, assert scrollY 900" -> "Galata ui-tests/tests/web-switch-tab-scrolling.spec.ts 'keeps the frame position across a tab switch, a frame reload and a page reload': scroll to 900, reload the page, assert scrollY 900"
 - [x] `ACC-PATCH-27-USER-SCROLL` **User scroll ends restore** - MEDIUM; a wheel or touch scroll during the restore stops it and keeps the user's position
   - evidence: Jest wheel-guard tests green: 15/15 web-switch, 120/120 suite
   - test: jlpm jest web-switch-tab-scrolling: dispatch wheel during the guard, assert the guard stops and scrollY stays
@@ -226,3 +228,69 @@ One settings switch per patch; false returns before patching; all default true.
   - test-tags: UNIT
   - log: 2026-11-11T17:42:44Z @kj added
   - log: 2026-11-11T18:05:46Z @kj closed: guard shipped in round 1
+- [x] `ACC-PATCH-33-OFF-LOOP` **Delete keeps the server answering** - HIGH; a file-browser delete to the trash runs the trash call in a worker thread, so the server answers other requests while it runs
+  - evidence: pytest -k delete_keeps_loop_responsive 2 passed: gap under 0.5 s with the patch, 1.01 s on the stock method (fails before); final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
+  - test: pytest -k delete_keeps_loop_responsive: slow send2trash stand-in (1.0 s), assert the largest event-loop gap stays under 0.5 s; with the switch off the gap is the full call
+  - test-tags: UNIT
+  - log: 2026-11-13T19:08:43Z @kj added
+  - log: 2026-11-13T19:54:49Z @kj edited test "pytest -k delete_keeps_loop_responsive: slow send2trash stand-in, assert the largest event-loop gap stays under 0.3 s; with the switch off the gap is the full call" -> "pytest -k delete_keeps_loop_responsive: slow send2trash stand-in (1.0 s), assert the largest event-loop gap stays under 0.5 s; with the switch off the gap is the full call"
+  - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-34-MOUNT-TRASH` **Cross-mount delete is a rename** - HIGH; a path on a mount other than the home trash's mount moves into that mount's .Trash-<uid> by rename; no copy, nothing added to the home trash
+  - evidence: pytest -k cross_mount_delete 3 passed, real bind mounts under bwrap included: item keeps its inode in <vol>/.Trash-1000, no shutil.move; stock copies into the home trash; final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
+  - test: pytest -k cross_mount_delete: simulated mounts with EXDEV, and real bind mounts under bwrap; assert the item lands in <mount>/.Trash-<uid>/files and shutil.move is never called
+  - test-tags: UNIT, INTEGRATION
+  - mechanism: 2026-11-13T19:54:49Z @kj compare the mount points of the path (realpath of the parent plus the name) and of the home trash, read from /proc/self/mountinfo by longest path-prefix with octal escapes decoded, because os.path.ismount and st_dev cannot tell bind mounts of one disk apart
+  - mechanism: 2026-11-13T19:08:43Z @kj compare kernel mount ids (/proc/self/fdinfo mnt_id) of the path and the home trash, because os.path.ismount and st_dev cannot tell bind mounts of one disk apart; mount point from /proc/self/mountinfo
+  - log: 2026-11-13T19:08:43Z @kj added
+  - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-35-TRASHINFO-PATH` **Original path recorded without dotdot** - MEDIUM; the .trashinfo Path of an item moved into a mount trash holds no '..', also when the path is reached through a symlinked parent folder
+  - evidence: pytest -k symlinked_parent_trashinfo 1 passed: trashinfo Path is the name, no '..'; fails before the patch; final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
+  - test: pytest -k symlinked_parent_trashinfo: delete through a symlinked parent, assert the trashinfo Path is the name under the mount
+  - test-tags: UNIT
+  - log: 2026-11-13T19:08:43Z @kj added
+  - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-36-TRASH-FALLBACK` **Mount trash failure handled** - MEDIUM; when the mount trash cannot be found or created (mount root not writable, /proc unreadable) the delete goes through the stock send2trash; a failed rename into the mount trash answers 400 with nothing moved and no copy
+  - evidence: pytest -k falls_back_to_stock_trash 3 passed: lookup failures land in the home trash; EACCES rename answers 400 with the item in place and no copy (fails on the pre-change code); final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
+  - test: pytest -k falls_back_to_stock_trash: the mount-trash lookup raises, assert the item lands in the home trash; a rename into the mount trash raising EACCES answers 400 with the item in place and no copy
+  - test-tags: UNIT
+  - log: 2026-11-13T19:08:43Z @kj added
+  - log: 2026-11-13T20:10:43Z @kj amended title "Unusable mount trash falls back" -> "Mount trash failure handled"; text "when the mount trash cannot be used (mount root not writable, /proc unreadable), the delete goes through the stock send2trash instead of failing" -> "when the mount trash cannot be found or created (mount root not writable, /proc unreadable) the delete goes through the stock send2trash; a failed rename into the mount trash answers 400 with nothing moved and no copy"
+  - log: 2026-11-13T20:10:44Z @kj edited test "pytest -k falls_back_to_stock_trash: the mount-trash step raises, assert the item lands in the home trash and the delete succeeds" -> "pytest -k falls_back_to_stock_trash: the mount-trash lookup raises, assert the item lands in the home trash; a rename into the mount trash raising EACCES answers 400 with the item in place and no copy"
+  - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-37-STOCK-ANSWERS` **Stock delete answers kept** - MEDIUM; with the patch, a delete still answers 400 for a hidden path, 404 missing, 403 not writable, 400 send2trash failed and 204 on success
+  - evidence: pytest -k stock_error_answers_kept 1 passed: 400 hidden, 404, 403, 400 send2trash failed, 204 against the in-process server; final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
+  - test: pytest -k stock_error_answers_kept: DELETE requests against the in-process test server, assert each status
+  - test-tags: UNIT
+  - log: 2026-11-13T19:08:43Z @kj added
+  - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-38-TRASH-SWITCH` **Switch off keeps the stock delete** - MEDIUM; with jupyterlab_file_delete_trash_fix false, or delete_to_trash false, the original delete_file runs unchanged; a switch change applies at the next delete without a restart
+  - evidence: pytest -k switch_off_calls_original 3 passed: switch off, delete_to_trash false and non-linux await the original; next delete after a switch change is patched; final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
+  - test: pytest -k switch_off_calls_original: spy on the original delete_file, assert it runs for switch false and for delete_to_trash false
+  - test-tags: UNIT
+  - log: 2026-11-13T19:08:43Z @kj added
+  - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-39-RELOAD-WRAP` **Re-patch wraps once** - LOW; a second patch call keeps one wrapper level, and a re-imported patch module, as after a soft reload, replaces the wrapper
+  - evidence: pytest -k does_not_wrap_twice 1 passed: one wrapper level after two calls, a re-imported module replaces the wrapper; final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
+  - test: pytest -k does_not_wrap_twice: call the patch twice and from a re-imported module, assert one wrapper level around the saved original
+  - test-tags: UNIT
+  - log: 2026-11-13T19:08:44Z @kj added
+  - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-40-BROWSER-DELETE` **File browser delete reaches the trash** - MEDIUM; with the switch on, a delete from the file browser removes the item from the listing and puts it in a trash folder; nothing is deleted permanently
+  - evidence: galata file-delete-trash.spec.ts passed in the full headed suite (23/23) in the bubblewrap runner: item leaves the listing and lands in /tmp/.Trash-1000/files; make install 1.0.30
+  - test: galata file-delete-trash.spec.ts: delete a file in the file browser, assert it leaves the listing and appears under a trash files folder
+  - test-tags: FUNCTIONAL
+  - log: 2026-11-13T19:08:44Z @kj added
+  - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-41-TRASH-DOCS` **Twelfth patch documented** - LOW; INTENT.md, the README and docs/file-delete-trash.md describe the patch, its switch and the patched member
+  - evidence: pytest test_docs 2 passed: docs/file-delete-trash.md has every required label, README links it, INTENT.md lists the twelfth patch; final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
+  - test: pytest test_docs: the page exists with the required labels and the README lists it
+  - test-tags: UNIT
+  - log: 2026-11-13T19:08:44Z @kj added
+  - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-42-PARALLEL-DELETE` **Parallel deletes lose no file** - HIGH; two deletes running at once, such as a multi-select delete in the file browser, never pick the same trash name; every deleted item stays in the trash
+  - evidence: pytest -k concurrent_deletes 1 passed; fails without _TRASH_LOCK (file B lost); 50 concurrent DELETE pairs lost 0 files (22 and 29 of 50 before the lock); final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
+  - test: pytest -k concurrent_deletes: two parallel deletes of 'a.txt' and 'a 1.txt' with 'a.txt' already in the mount trash keep all three items
+  - test-tags: UNIT
+  - mechanism: 2026-11-13T19:54:49Z @kj one module lock serialises the trash moves of the worker threads, because send2trash picks a free name and renames in two steps
+  - log: 2026-11-13T19:54:49Z @kj added
+  - log: 2026-11-13T20:34:17Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
