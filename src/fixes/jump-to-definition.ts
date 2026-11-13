@@ -145,7 +145,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
           .replace('__NOTEBOOK_SOURCE__', () => JSON.stringify(notebookSource));
 
         // Execute in kernel
-        const future = kernel.requestExecute({ code: jediCode });
+        // store_history false: a jump must not raise the cell execution count
+        const future = kernel.requestExecute({
+          code: jediCode,
+          store_history: false
+        });
         let output = '';
 
         future.onIOPub = (msg: KernelMessage.IIOPubMessage) => {
@@ -233,7 +237,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
         // Get kernel's current working directory
         const cwdCode = 'import os; print(os.getcwd())';
-        const cwdFuture = kernel.requestExecute({ code: cwdCode });
+        const cwdFuture = kernel.requestExecute({
+          code: cwdCode,
+          store_history: false
+        });
         let kernelCwd = '';
 
         cwdFuture.onIOPub = (msg: KernelMessage.IIOPubMessage) => {

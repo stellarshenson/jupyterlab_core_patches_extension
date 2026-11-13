@@ -139,13 +139,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
       // Attach load listeners to all images
       images.forEach((img, index) => {
         const handler = imageLoadHandler(index);
+
+        // A complete image, loaded or failed, is settled and fires no event
+        if (img.complete) {
+          handler();
+          return;
+        }
         img.addEventListener('load', handler, { once: true });
         img.addEventListener('error', handler, { once: true });
-
-        // If image is already complete, trigger immediately
-        if (img.complete && img.naturalHeight !== 0) {
-          handler();
-        }
       });
 
       /**

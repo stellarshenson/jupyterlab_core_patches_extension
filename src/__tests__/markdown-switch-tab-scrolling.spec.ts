@@ -226,6 +226,20 @@ describe('markdown switch-tab scrolling patch', () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 
+  it('treats an image that failed before the activation as settled', async () => {
+    const { shell, fire } = createShell();
+    await activate(shell);
+    const { widget, images } = createMarkdownWidget({ images: 1 });
+    // A failed image is complete and keeps naturalHeight 0.
+    Object.defineProperty(images[0], 'complete', { get: () => true });
+
+    fire(widget);
+    jest.advanceTimersByTime(TICK_MS * 3);
+
+    expect(widget.node.hasAttribute(GUARD_ATTRIBUTE)).toBe(false);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
   it('releases the guard after 30 polls when no image settles', async () => {
     const { shell, fire } = createShell();
     await activate(shell);
