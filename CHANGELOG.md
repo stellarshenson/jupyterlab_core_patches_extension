@@ -2,6 +2,17 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.28] - 2026-11-13
+
+### Changed
+
+- Skip the PayPal link in the link check
+
+### Fixed
+
+- Read the server-side switches from the folder JupyterLab writes
+- Keep the execution count on a jump and release the scroll guard on a failed image
+
 ## [1.0.24] - 2026-11-11
 
 ### Fixed
