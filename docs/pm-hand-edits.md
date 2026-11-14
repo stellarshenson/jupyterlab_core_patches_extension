@@ -1,1 +1,2 @@
 - 2026-11-05T23:41:28Z @kj acc-crit.md 1aaf98f8 sha256:ac8367944d0a1bfa3ba5762f761db3148b3f4740bb17e5de32a39f72d2747606: the tracker preamble carries a present-tense patch count that pm-tools describe cannot reach
+- 2026-11-14T08:57:51Z @kj acc-crit.md a4791392 sha256:8675ca430985f043171f5c6b3588a5671115d83ead5b437bffb4a5af97fb74a9: DEF-BUILD-6-PRETTIER: jlpm prettier rewrote src/__tests__/ to src/**tests**/ in 4 test hints and 2 log lines; restore the original text, which pm-tools cannot write into a log line

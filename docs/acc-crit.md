@@ -32,7 +32,7 @@ One labextension entry, one settings schema and the plugin ids that carry the pa
   - log: 2026-10-30T08:13:26Z @kj edited text "The main plugin logs JupyterLab extension jupyterlab-core-patches-extension is activated! exactly once on page load." -> "The main plugin logs JupyterLab extension @stellarshenson/jupyterlab-core-patches-extension is activated! exactly once on page load."; reason: The npm package and labextension move to the scoped name @stellarshenson/jupyterlab-core-patches-extension, because npm rejects the unscoped name as too similar to the published Python distribution; the activation message carries the scoped name
 - [x] `ACC-CORE-3-GUARD` **Second patch skipped** - CRITICAL; A patch already applied by an installed old package is detected by its marker; the new plugin returns without patching a second time.
   - evidence: Jest 101/101; each guarded patch spec calls the patch twice and asserts a no-op (junit.xml)
-  - test: src/**tests**/file-browser-column-width.spec.ts and the other guarded patches' Jest files call the patch twice and assert the second call is a no-op
+  - test: src/__tests__/file-browser-column-width.spec.ts and the other guarded patches' Jest files call the patch twice and assert the second call is a no-op
   - test-tags: UNIT, FUNCTIONAL
   - log: 2026-10-29T07:56:35Z @kj added
   - log: 2026-10-29T09:40:12Z @kj closed
@@ -49,6 +49,15 @@ One labextension entry, one settings schema and the plugin ids that carry the pa
   - log: 2026-10-29T07:56:35Z @kj added
   - log: 2026-10-29T09:40:12Z @kj closed
   - log: 2026-11-05T23:41:26Z @kj amended text "README lists all ten patches and links one docs/<slug>.md page per patch; each page states the switch, plugin id, patched member, guard, source and tests." -> "README lists every patch and links one docs/<slug>.md page per patch; each page states the switch, plugin id, patched member, guard, source and tests."
+- [x] `ACC-CORE-43-TRACKER-FORMAT` **Lint step keeps the tracker text** - LOW; jlpm prettier, run by the release lint step, leaves docs/acc-crit.md, docs/defects.md and docs/pm-hand-edits.md unchanged, so a path such as `src/__tests__/` stays as written; jlpm run lint:check still exits 0
+  - evidence: jlpm prettier leaves acc-crit.md, defects.md and pm-hand-edits.md byte-identical (sha256); 3 src/__tests__ spec paths in test hints exist; lint:check exit 0; verifier wf_4770c325-050 7/7; review wf_98c09d0c-59a round 1 SHIP
+  - related: DEF-BUILD-6-PRETTIER
+  - test: jlpm prettier, then git diff --exit-code on the three tracker files: no change; every src/__tests__/ spec path in a test hint names a file that exists; jlpm run lint:check exit 0
+  - test-tags: MANUAL
+  - mechanism: 2026-11-14T08:58:07Z @kj .prettierignore lists the three tracker files; pm-tools check validates them instead
+  - log: 2026-11-14T08:58:07Z @kj added
+  - log: 2026-11-14T09:01:10Z @kj edited test "jlpm prettier, then git diff --exit-code on the three tracker files: no change; grep finds no src/**tests**/ in docs/; jlpm run lint:check exit 0" -> "jlpm prettier, then git diff --exit-code on the three tracker files: no change; every src/__tests__/ spec path in a test hint names a file that exists; jlpm run lint:check exit 0"
+  - log: 2026-11-14T09:10:03Z @kj closed
 
 ## Patch toggles `PATCH`
 
@@ -125,11 +134,11 @@ One settings switch per patch; false returns before patching; all default true.
   - log: 2026-10-30T12:21:45Z @kj closed: verified by the new-replay contract tests
 - [x] `ACC-PATCH-17-SHOW-SAFE` **First show does not reconnect** - HIGH; A terminal's first show does not reconnect its session; the fitted size is sent and the running program repaints itself.
   - evidence: Jest 102 passed: refresh never called, set_size held until open then forwarded, the first open steps the PTY one column and restores the fitted size; pytest 170 passed; lint:check 0 warnings, 0 errors
-  - test: Jest src/**tests**/terminal-cpr-escape.spec.ts asserts refresh is never called, the held set_size is dropped until the xterm opens and forwarded after, and the first open steps the PTY one column and restores the fitted size
+  - test: Jest src/__tests__/terminal-cpr-escape.spec.ts asserts refresh is never called, the held set_size is dropped until the xterm opens and forwarded after, and the first open steps the PTY one column and restores the fitted size
   - test-tags: UNIT
   - log: 2026-10-30T12:18:43Z @kj added
   - log: 2026-10-30T12:21:45Z @kj closed: verified by the first-show contract tests
-  - log: 2026-10-30T12:35:55Z @kj edited test "Jest src/**tests**/terminal-cpr-escape.spec.ts asserts refresh is never called, the held set_size is dropped until the xterm opens and forwarded after" -> "Jest src/**tests**/terminal-cpr-escape.spec.ts asserts refresh is never called, the held set_size is dropped until the xterm opens and forwarded after, and the first open steps the PTY one column and restores the fitted size"; evidence "Jest 102 passed: refresh never called, set_size held until open then forwarded, isEnabled false forwards it; pytest 170 passed; lint:check 0 warnings, 0 errors" -> "Jest 102 passed: refresh never called, set_size held until open then forwarded, the first open steps the PTY one column and restores the fitted size; pytest 170 passed; lint:check 0 warnings, 0 errors"
+  - log: 2026-10-30T12:35:55Z @kj edited test "Jest src/__tests__/terminal-cpr-escape.spec.ts asserts refresh is never called, the held set_size is dropped until the xterm opens and forwarded after" -> "Jest src/__tests__/terminal-cpr-escape.spec.ts asserts refresh is never called, the held set_size is dropped until the xterm opens and forwarded after, and the first open steps the PTY one column and restores the fitted size"; evidence "Jest 102 passed: refresh never called, set_size held until open then forwarded, isEnabled false forwards it; pytest 170 passed; lint:check 0 warnings, 0 errors" -> "Jest 102 passed: refresh never called, set_size held until open then forwarded, the first open steps the PTY one column and restores the fitted size; pytest 170 passed; lint:check 0 warnings, 0 errors"
 - [x] `ACC-PATCH-18-PRIVATE` **Private CPR responses filtered** - HIGH; Private CPR responses, ESC-prefixed and bare, are removed from live output and from a replay.
   - evidence: pytest 170 passed: test_filters_private_cpr, test_filters_bare_private_cpr and test_private_cpr_removed_from_live_and_replay; Jest 102 passed; lint:check 0 warnings, 0 errors
   - test: pytest jupyterlab_core_patches_extension/tests/test_terminal_cpr_escape.py test_filters_private_cpr, test_filters_bare_private_cpr and test_private_cpr_removed_from_live_and_replay
@@ -152,7 +161,7 @@ One settings switch per patch; false returns before patching; all default true.
   - log: 2026-10-30T12:52:01Z @kj closed
 - [x] `ACC-PATCH-21-NEW-NOSTEP` **No first-show step for a new session** - HIGH; A terminal whose session was not running when the page loaded, such as one the page starts new, sends only its fitted size at its first show; a terminal whose session was running when the page loaded and has run since keeps the one-column step and the restore.
   - evidence: Jest 105 passed; the new-session and reused-name tests failed before the change (2 of 105) and pass, the page-load session still steps and restores; make test exit 0, pytest 185 passed; lint:check exit 0; make install 1.0.19
-  - test: Jest src/**tests**/terminal-cpr-escape.spec.ts asserts a terminal whose session the page started sends only the fitted size, a reused name of a closed session gets no step, and a session running at page load still steps and restores; ui-tests/tests/terminal-cpr-escape.spec.ts asserts the restored background terminal still steps
+  - test: Jest src/__tests__/terminal-cpr-escape.spec.ts asserts a terminal whose session the page started sends only the fitted size, a reused name of a closed session gets no step, and a session running at page load still steps and restores; ui-tests/tests/terminal-cpr-escape.spec.ts asserts the restored background terminal still steps
   - test-tags: UNIT, FUNCTIONAL
   - mechanism: 2026-11-03T08:59:45Z @kj The plugin records the session names the terminal manager lists when it is ready and drops a name once it leaves the running list; holdUntilOpened steps only a terminal whose session name is in that set
   - log: 2026-11-03T08:59:45Z @kj added
@@ -167,11 +176,11 @@ One settings switch per patch; false returns before patching; all default true.
   - log: 2026-11-03T09:31:05Z @kj closed; reason: closed on the pytest and the cold trace; Galata not run
 - [x] `ACC-PATCH-23-WEB-SCROLL` **Web tab scrolling switch** - HIGH; jupyterlab_web_switch_tab_scrolling_fix defaults true; false leaves an iframe tab at the top on reselect, refresh and page reload; a change applies on page reload
   - evidence: headed suite 22/22: switch-off reselect reads 0; served schema has the switch default true; Jest 15/15 web-switch, 120/120 suite
-  - test: src/**tests**/web-switch-tab-scrolling.spec.ts 'declares a default-on switch and skips the patch when it is off'; Galata ui-tests/tests/web-switch-tab-scrolling.spec.ts 'leaves the frame at the top when the switch is off'
+  - test: src/__tests__/web-switch-tab-scrolling.spec.ts 'declares a default-on switch and skips the patch when it is off'; Galata ui-tests/tests/web-switch-tab-scrolling.spec.ts 'leaves the frame at the top when the switch is off'
   - test-tags: UNIT
   - log: 2026-11-05T22:35:57Z @kj added
   - log: 2026-11-06T02:26:30Z @kj closed: verified in the final headed gate
-  - log: 2026-11-13T21:21:20Z @kj edited test "schema read asserts default true; with the switch false no restore handler runs" -> "src/**tests**/web-switch-tab-scrolling.spec.ts 'declares a default-on switch and skips the patch when it is off'; Galata ui-tests/tests/web-switch-tab-scrolling.spec.ts 'leaves the frame at the top when the switch is off'"
+  - log: 2026-11-13T21:21:20Z @kj edited test "schema read asserts default true; with the switch false no restore handler runs" -> "src/__tests__/web-switch-tab-scrolling.spec.ts 'declares a default-on switch and skips the patch when it is off'; Galata ui-tests/tests/web-switch-tab-scrolling.spec.ts 'leaves the frame at the top when the switch is off'"
 - [x] `ACC-PATCH-24-TAB-RESELECT` **Scroll kept on tab reselect** - CRITICAL; a same-origin iframe scrolled to 900 keeps 900 when its tab is reselected
   - evidence: headed spec:225 passed in 9.6 s: hidden frame 0, reactivated tab reads 900
   - test: ui-tests/tests/web-switch-tab-scrolling.spec.ts: scroll the proxy iframe to 900, activate another tab, return, assert scrollY 900

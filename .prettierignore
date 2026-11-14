@@ -7,3 +7,6 @@ jupyterlab_core_patches_extension
 eslint.config.mjs
 .venv
 package-lock.json
+docs/acc-crit*.md
+docs/defects*.md
+docs/pm-hand-edits.md

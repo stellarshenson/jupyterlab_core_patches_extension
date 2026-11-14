@@ -43,3 +43,18 @@ Wrong behaviour of one of the eleven patches in ordinary use
   - root-cause: 2026-11-13T07:38:14Z @kj settings.py _settings_path fell back to jupyter_data_dir()/lab/user-settings because ServerApp has no user_settings_dir attribute; JupyterLab stores user settings in LabApp.user_settings_dir (~/.jupyter/lab/user-settings)
   - log: 2026-11-13T07:38:14Z @kj added
   - log: 2026-11-13T07:38:34Z @kj closed
+
+## Build and release `BUILD`
+
+Build, lint and release tooling of the extension
+
+- log: 2026-11-14T08:55:17Z @kj category created
+
+- [x] `DEF-BUILD-6-PRETTIER` **Prettier rewrites test paths in the criteria tracker** - MINOR; jlpm prettier, the release lint step, reads the underscores in `src/__tests__/` as emphasis and writes `src/**tests**/` into docs/acc-crit.md: 6 lines, 4 test hints and 2 log lines; a reader looking for the named test finds no such folder
+  - evidence: .prettierignore lists the three tracker files: sha256 unchanged across jlpm prettier, lint:check exit 0, six lines restored; fix wf_4770c325-050 ACCEPTED (Jest 121, pytest 206, Galata 23/23); review wf_98c09d0c-59a round 1 SHIP
+  - repro: jlpm prettier with a criterion test hint naming src/__tests__/x.spec.ts; the hint then reads src/**tests**/x.spec.ts
+  - test-tags: MANUAL
+  - root-cause: 2026-11-14T08:55:17Z @kj prettier formats docs/*.md as markdown and rewrites a word wrapped in double underscores, strong emphasis, to double asterisks
+  - log: 2026-11-14T08:55:17Z @kj added
+  - log: 2026-11-14T09:10:03Z @kj closed
+

@@ -2,6 +2,12 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.32] - 2026-11-14
+
+### Fixed
+
+- The release lint step no longer rewrites `src/__tests__/` to `src/**tests**/` in the acceptance-criteria tracker: `.prettierignore` excludes `docs/acc-crit*.md`, `docs/defects*.md` and `docs/pm-hand-edits.md`, which `pm-tools check` validates; the six damaged tracker lines read their written text again
+
 ## [1.0.31] - 2026-11-13
 
 ### Added
