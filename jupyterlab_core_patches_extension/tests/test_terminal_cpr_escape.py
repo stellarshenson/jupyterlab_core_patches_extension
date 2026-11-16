@@ -23,6 +23,9 @@ from tornado.websocket import WebSocketClosedError
 EXT = importlib.import_module(
     "jupyterlab_core_patches_extension.server.terminal_cpr_escape"
 )
+PROCESSES = importlib.import_module(
+    "jupyterlab_core_patches_extension.server.terminal_processes"
+)
 
 filter_terminal_responses = EXT.filter_terminal_responses
 strip_replay_queries = EXT.strip_replay_queries
@@ -1005,7 +1008,7 @@ class TestWinsizeBounce:
         @contextlib.contextmanager
         def patched():
             with mock.patch('os.tcgetpgrp', return_value=4242) as tcgetpgrp, \
-                    mock.patch.object(EXT, 'open', side_effect=fake_open, create=True) as opened, \
+                    mock.patch.object(PROCESSES, 'open', side_effect=fake_open, create=True) as opened, \
                     mock.patch('os.getpgid', side_effect=fake_getpgid) as getpgid:
                 yield types.SimpleNamespace(tcgetpgrp=tcgetpgrp, open=opened, getpgid=getpgid)
 

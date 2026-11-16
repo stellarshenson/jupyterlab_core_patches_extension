@@ -17,3 +17,6 @@ c.FileContentsManager.delete_to_trash = False
 # The trash is on for the default contents manager, so file-delete-trash.spec.ts
 # reaches the patched trash path; the class-specific value wins over the line above.
 c.AsyncLargeFileManager.delete_to_trash = True
+# Where the advanced file browser extension is installed, its delete dialog offers
+# Move to Trash only on a monitored mount; this offers it on the test folder's mount too.
+c.AdvancedFileBrowser.trash_on_all_volumes = True

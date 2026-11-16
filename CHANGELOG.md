@@ -2,6 +2,17 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.37] - 2026-11-16
+
+### Fixed
+
+- A terminal tab that JupyterLab stopped retrying after 7 failed reconnects, after a laptop sleep or a network drop, no longer keeps its last screen and drops typed text: the terminal CPR escape patch reconnects it when the page is shown again, when the browser is back online, or when you type into it, and the text typed while it was disconnected is sent after the reconnect. The `jupyterlab_terminal_cpr_escape_fix` switch covers it; no setting is added
+- The file-delete Galata test finds the Move to Trash button by its label, so it passes when the advanced file browser extension replaces the delete dialog
+
+### Changed
+
+- The terminal CPR escape and restore terminals patches act on terminal sessions through one shared frontend module (one handler per page, one `send` wrapper per terminal session, one owner of the terminal page listeners and timers) and one server helper for the shell names and the `/proc` readers; both switches and every settings key stay as they were
+
 ## [1.0.32] - 2026-11-14
 
 ### Fixed

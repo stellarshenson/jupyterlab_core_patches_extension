@@ -9,7 +9,7 @@ import { ITerminalTracker } from '@jupyterlab/terminal';
 
 import { CORE_PATCHES_ID, isPatchEnabled } from '../patches';
 
-import { holdUntilOpened } from './terminal-cpr-escape/unopenedTerminal';
+import { registerCprEscape } from './terminal-session';
 
 /**
  * The switch key in the shared settings schema.
@@ -32,11 +32,18 @@ const REDRAW_OPTION = 'redrawBackgroundTerminals';
  * size to the server; at its first show the widget sends the fitted size and,
  * for a session that was running when the page loaded, the hold steps the PTY
  * once, so the running program repaints at it.
+ *
+ * The plugin also reconnects a terminal that JupyterLab gave up on after 7
+ * failed retries: when the page becomes visible again, when the browser fires
+ * `online`, and when the user types into that terminal.
+ *
+ * The plugin registers this part on the shared terminal-session module, which
+ * also serves the restore terminals patch.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
   id: '@stellarshenson/jupyterlab-core-patches-extension:terminal-cpr-escape',
   description:
-    'Fix CPR escape sequences in idle terminal reconnections and redraw background terminals at their real size when first shown',
+    'Fix CPR escape sequences in idle terminal reconnections, redraw background terminals at their real size when first shown, and reconnect a terminal that lost its connection when the page is shown, the network returns or the user types',
   autoStart: true,
   optional: [ITerminalTracker, ISettingRegistry],
   activate: async (
@@ -94,9 +101,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
       restored = new Set([...restored].filter(name => names.includes(name)));
     });
 
-    tracker.widgetAdded.connect((_, widget) => {
-      const name = widget.content.session.name;
-      holdUntilOpened(widget.content, isEnabled, () => restored.has(name));
+    registerCprEscape(tracker, {
+      isEnabled,
+      isRestored: name => restored.has(name)
     });
   }
 };

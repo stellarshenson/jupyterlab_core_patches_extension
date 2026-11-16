@@ -8,6 +8,7 @@ import { ITerminalTracker } from '@jupyterlab/terminal';
 
 import { isPatchEnabled } from '../patches';
 import { requestAPI } from './restore-terminals/request';
+import { registerRestore } from './terminal-session';
 
 /**
  * The settings key that switches this patch on and off.
@@ -18,17 +19,6 @@ export const SWITCH_KEY = 'jupyterlab_restore_terminals_fix';
  * The window key that makes a second activation a no-op.
  */
 export const PATCH_MARKER = '__jp_restore_terminals_fix__';
-
-/**
- * The interval between periodic terminal-folder snapshots, in milliseconds.
- */
-export const POLL_INTERVAL_MS = 15000;
-
-/**
- * The delays after a terminal opens at which the report is retried, in
- * milliseconds. The first report can run before the terminal's pty exists.
- */
-export const OPEN_REPORT_DELAYS_MS = [2000, 5000];
 
 /**
  * Report the names of all terminals currently in the layout to the server.
@@ -96,21 +86,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // saved terminals at startup, before any frontend connects, so the
     // stock terminal plugin's restore connects to them in the right cwd.
     // The frontend only reports which terminals are in-layout and lets
-    // the server snapshot their cwds.
-
-    // Report shortly after a terminal opens (retry for pty spawn lag).
-    terminalTracker.widgetAdded.connect(() => {
-      for (const delay of OPEN_REPORT_DELAYS_MS) {
-        setTimeout(() => {
-          reportLayoutTerminals(terminalTracker, serverSettings);
-        }, delay);
+    // the server snapshot their cwds. The shared terminal-session module
+    // runs the report after a terminal opens and every 15 seconds.
+    registerRestore(terminalTracker, {
+      report: () => {
+        reportLayoutTerminals(terminalTracker, serverSettings);
       }
     });
-
-    // Periodic snapshot to capture `cd` between opens.
-    setInterval(() => {
-      reportLayoutTerminals(terminalTracker, serverSettings);
-    }, POLL_INTERVAL_MS);
   }
 };
 

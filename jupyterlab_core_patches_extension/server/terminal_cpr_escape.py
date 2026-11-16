@@ -20,6 +20,11 @@ from collections import Counter
 
 from tornado.websocket import WebSocketClosedError
 
+from jupyterlab_core_patches_extension.server.terminal_processes import (
+    SHELL_NAMES,
+    read_children,
+    read_comm,
+)
 from jupyterlab_core_patches_extension.settings import patch_enabled
 
 # The switch key in the shared settings schema. The frontend plugin gates on
@@ -143,9 +148,9 @@ REPLAY_QUERY = re.compile(
 _BOUNCE_DELAY = 0.4  # let client geometry settle before the step
 _BOUNCE_STEP = 0.12  # pause between the narrow write and the restore
 _BOUNCE_DEBOUNCE = 5.0  # min seconds between steps on the same terminal
-_SHELLS = frozenset(
-    {b"bash", b"sh", b"dash", b"zsh", b"fish", b"ksh", b"tcsh", b"csh"}
-)
+# The shell names as bytes: the comm file is compared as bytes, so a process
+# name that is not valid UTF-8 raises nothing.
+_SHELLS = frozenset(name.encode() for name in SHELL_NAMES)
 
 
 def filter_terminal_responses(text: str) -> tuple[str, dict[str, int], list[str]]:
@@ -214,13 +219,12 @@ def _shell_at_prompt(term) -> bool:
     """
     try:
         leader = os.tcgetpgrp(term.fd)
-        with open(f"/proc/{leader}/comm", "rb") as comm:
-            if comm.read().strip() not in _SHELLS:
-                return False
-        with open(f"/proc/{leader}/task/{leader}/children", "rb") as children:
-            return all(
-                os.getpgid(int(pid)) != leader for pid in children.read().split()
-            )
+        if read_comm(leader).strip() not in _SHELLS:
+            return False
+        return all(
+            os.getpgid(int(pid)) != leader
+            for pid in read_children(leader, leader)
+        )
     except (AttributeError, OSError):
         return False
 

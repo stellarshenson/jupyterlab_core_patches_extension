@@ -20,21 +20,22 @@ from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 import tornado
 
+from jupyterlab_core_patches_extension.server.terminal_processes import (
+    SHELL_NAMES,
+    read_children,
+    read_comm,
+)
 from jupyterlab_core_patches_extension.settings import patch_enabled
 
 # The settings key that switches this patch on and off.
 SWITCH_KEY = "jupyterlab_restore_terminals_fix"
 
-KNOWN_SHELLS = {'bash', 'zsh', 'fish', 'sh', 'dash', 'ksh', 'tcsh', 'csh'}
-
 
 def _get_process_comm(pid: int) -> str | None:
+    """Return the command name of process ``pid``, or None when it cannot be read."""
     try:
         if sys.platform == "linux":
-            comm_file = f"/proc/{pid}/comm"
-            if os.path.exists(comm_file):
-                with open(comm_file, "r") as f:
-                    return f.read().strip()
+            return read_comm(pid).decode().strip()
         else:
             result = subprocess.run(
                 ["ps", "-p", str(pid), "-o", "comm="],
@@ -50,15 +51,14 @@ def _get_process_comm(pid: int) -> str | None:
 
 
 def _get_direct_children(parent_pid: int) -> list[int]:
+    """Return the direct children of ``parent_pid``, forked by any of its threads."""
     children = []
     try:
         if sys.platform == "linux":
             # Each thread's file lists only the children that thread forked
-            task_dir = f"/proc/{parent_pid}/task"
-            for tid in os.listdir(task_dir):
+            for tid in os.listdir(f"/proc/{parent_pid}/task"):
                 try:
-                    with open(f"{task_dir}/{tid}/children", "r") as f:
-                        tokens = f.read().split()
+                    tokens = read_children(parent_pid, tid)
                 except OSError:
                     continue
                 for child in tokens:
@@ -85,8 +85,9 @@ def _get_direct_children(parent_pid: int) -> list[int]:
 
 
 def _collect_process_tree(pid: int, depth: int, results: list) -> None:
+    """Append ``(pid, depth, is_shell, comm)`` for ``pid`` and each descendant."""
     comm = _get_process_comm(pid)
-    is_shell = comm in KNOWN_SHELLS if comm else False
+    is_shell = comm in SHELL_NAMES if comm else False
     results.append((pid, depth, is_shell, comm))
 
     for child_pid in _get_direct_children(pid):

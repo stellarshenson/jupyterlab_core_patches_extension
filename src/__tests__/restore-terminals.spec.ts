@@ -2,11 +2,9 @@ import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { ITerminalTracker } from '@jupyterlab/terminal';
 import { Signal } from '@lumino/signaling';
 
-import plugin, {
-  PATCH_MARKER,
-  POLL_INTERVAL_MS
-} from '../fixes/restore-terminals';
+import plugin, { PATCH_MARKER } from '../fixes/restore-terminals';
 import { requestAPI } from '../fixes/restore-terminals/request';
+import { POLL_INTERVAL_MS } from '../fixes/terminal-session';
 
 jest.mock('../fixes/restore-terminals/request');
 

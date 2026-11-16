@@ -1,10 +1,12 @@
 import { JupyterFrontEnd } from '@jupyterlab/application';
+import { ServerConnection } from '@jupyterlab/services';
+import { TerminalConnection } from '@jupyterlab/services/lib/terminal/default';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { ITerminalTracker } from '@jupyterlab/terminal';
 import { Signal } from '@lumino/signaling';
 
 import plugin from '../fixes/terminal-cpr-escape';
-import { holdUntilOpened } from '../fixes/terminal-cpr-escape/unopenedTerminal';
+import { holdUntilOpened, reconnectOnTyping } from '../fixes/terminal-session';
 
 /**
  * The size JupyterLab reports for an xterm that was never opened.
@@ -38,21 +40,27 @@ const RESTORED_NAME = '1';
 type WidgetAddedHandler = (sender: unknown, widget: unknown) => void;
 
 /**
- * The parts of the terminal widget that `holdUntilOpened` uses, in a hidden
- * tab. `refresh` is present so a test can assert the patch never reconnects
- * the session.
+ * The parts of the terminal widget that `holdUntilOpened` and the reconnect
+ * use, in a hidden tab. `refresh` is present so a test can assert the patch
+ * never reconnects the session at the first open. `reconnect` turns the
+ * status `connecting` at once, as the stock session does.
  */
-function fakeTerminal(name = RESTORED_NAME) {
+function fakeTerminal(name = RESTORED_NAME, connectionStatus = 'connected') {
   const send = jest.fn();
   const refresh = jest.fn(() => Promise.resolve());
-  const session: any = { send, name };
+  const session: any = { send, name, connectionStatus, isDisposed: false };
+  const reconnect = jest.fn(() => {
+    session.connectionStatus = 'connecting';
+    return Promise.resolve();
+  });
+  session.reconnect = reconnect;
   const terminal: any = {
     node: document.createElement('div'),
     session,
     refresh
   };
   terminal.disposed = new Signal<any, void>(terminal);
-  return { terminal, send, refresh };
+  return { terminal, send, refresh, reconnect };
 }
 
 /**
@@ -74,7 +82,7 @@ function flush(): Promise<void> {
 
 /**
  * A terminal tracker stand-in that records `widgetAdded` handlers and fires
- * them on demand.
+ * them on demand. `fire` also adds the widget to the list `forEach` walks.
  */
 function createTracker(): {
   tracker: ITerminalTracker;
@@ -82,17 +90,22 @@ function createTracker(): {
   connections: () => number;
 } {
   const handlers: WidgetAddedHandler[] = [];
+  const widgets: unknown[] = [];
   const tracker = {
     widgetAdded: {
       connect: (handler: WidgetAddedHandler): WidgetAddedHandler => {
         handlers.push(handler);
         return handler;
       }
-    }
+    },
+    forEach: (callback: (widget: unknown) => void) => widgets.forEach(callback)
   } as unknown as ITerminalTracker;
   return {
     tracker,
-    fire: widget => handlers.forEach(handler => handler(null, widget)),
+    fire: widget => {
+      widgets.push(widget);
+      handlers.forEach(handler => handler(null, widget));
+    },
     connections: () => handlers.length
   };
 }
@@ -243,6 +256,234 @@ describe('terminal CPR escape plugin', () => {
     change([RESTORED_NAME]);
 
     expect(showThroughPlugin(fire, RESTORED_NAME)).toEqual([[FITTED_SIZE]]);
+  });
+});
+
+/**
+ * Set `document.visibilityState` and fire `visibilitychange`, as a browser
+ * does when the page is hidden or shown again.
+ */
+function setVisibility(state: 'visible' | 'hidden'): void {
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    value: state
+  });
+  document.dispatchEvent(new Event('visibilitychange'));
+}
+
+/**
+ * Fire the event the browser sends when the network comes back.
+ */
+function goOnline(): void {
+  window.dispatchEvent(new Event('online'));
+}
+
+/**
+ * A websocket stand-in for the stock `TerminalConnection`. Every socket the
+ * connection opens lands in `sockets`; a test drives `onmessage` and
+ * `onclose` by hand.
+ */
+class FakeSocket {
+  static sockets: FakeSocket[] = [];
+  readonly sent: string[] = [];
+  onmessage: (event: { data: string }) => void = () => undefined;
+  onclose: (event: { code: number }) => void = () => undefined;
+  onerror: (event: { code: number }) => void = () => undefined;
+
+  constructor(readonly url: string) {
+    FakeSocket.sockets.push(this);
+  }
+
+  send(data: string): void {
+    this.sent.push(data);
+  }
+
+  close(): void {
+    // The connection clears the handlers before it closes a socket.
+  }
+}
+
+/**
+ * A stock `TerminalConnection` on `FakeSocket` that JupyterLab gave up on:
+ * the first socket connects, then every retry closes until the status is
+ * `disconnected`. Needs fake timers for the retry delays.
+ */
+function givenUpConnection(): TerminalConnection {
+  FakeSocket.sockets = [];
+  const connection = new TerminalConnection({
+    model: { name: RESTORED_NAME },
+    serverSettings: ServerConnection.makeSettings({
+      wsUrl: 'ws://localhost/',
+      WebSocket: FakeSocket as unknown as typeof WebSocket
+    })
+  });
+  FakeSocket.sockets[0].onmessage({ data: '["setup", {}]' });
+  expect(connection.connectionStatus).toBe('connected');
+  for (let attempt = 0; attempt < 10; attempt++) {
+    if (connection.connectionStatus === 'disconnected') {
+      break;
+    }
+    FakeSocket.sockets[FakeSocket.sockets.length - 1].onclose({ code: 1006 });
+    jest.runOnlyPendingTimers();
+  }
+  expect(connection.connectionStatus).toBe('disconnected');
+  return connection;
+}
+
+describe('terminal reconnect', () => {
+  it('reconnects a disconnected terminal when the page becomes visible', async () => {
+    const { tracker, fire } = createTracker();
+    await activate(tracker, createRegistry(true));
+    const { terminal, reconnect } = fakeTerminal('2', 'disconnected');
+    fire({ content: terminal });
+
+    setVisibility('hidden');
+    expect(reconnect).not.toHaveBeenCalled();
+
+    setVisibility('visible');
+    expect(reconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('reconnects a disconnected terminal when the browser fires online', async () => {
+    const { tracker, fire } = createTracker();
+    await activate(tracker, createRegistry(true));
+    const { terminal, reconnect } = fakeTerminal('2', 'disconnected');
+    fire({ content: terminal });
+
+    goOnline();
+
+    expect(reconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('reconnects on typed input and sends it after the connection opens, in typed order', () => {
+    jest.useFakeTimers();
+    const warn = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
+    const error = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    try {
+      const connection = givenUpConnection();
+      const reconnect = jest.spyOn(connection, 'reconnect');
+      reconnectOnTyping(connection);
+      const opened = FakeSocket.sockets.length;
+
+      connection.send({ type: 'stdin', content: ['l'] });
+      connection.send({ type: 'stdin', content: ['s'] });
+      expect(reconnect).toHaveBeenCalledTimes(1);
+      expect(connection.connectionStatus).toBe('connecting');
+
+      jest.runOnlyPendingTimers();
+      expect(FakeSocket.sockets).toHaveLength(opened + 1);
+      const socket = FakeSocket.sockets[opened];
+      expect(socket.sent).toEqual([]);
+
+      socket.onmessage({ data: '["setup", {}]' });
+
+      expect(connection.connectionStatus).toBe('connected');
+      expect(socket.sent).toEqual(['["stdin","l"]', '["stdin","s"]']);
+      connection.dispose();
+    } finally {
+      warn.mockRestore();
+      error.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
+  it('keeps the typing trigger after the hold releases send', async () => {
+    const { tracker, fire } = createTracker();
+    await activate(tracker, createRegistry(true));
+    const { terminal, send, reconnect } = fakeTerminal('2', 'disconnected');
+    fire({ content: terminal });
+
+    terminal.session.send(STDIN);
+    expect(reconnect).toHaveBeenCalledTimes(1);
+
+    open(terminal);
+    await flush();
+    terminal.session.connectionStatus = 'disconnected';
+    terminal.session.send(STDIN);
+
+    expect(reconnect).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls).toEqual([[STDIN], [STDIN]]);
+  });
+
+  it('wraps send once when the plugin is activated twice', async () => {
+    const first = createTracker();
+    const second = createTracker();
+    await activate(first.tracker, createRegistry(true));
+    await activate(second.tracker, createRegistry(true));
+    const { terminal, send, reconnect } = fakeTerminal('2', 'disconnected');
+    // A reconnect that leaves the status disconnected: a second wrapper on
+    // the session would call it a second time for one keystroke.
+    reconnect.mockImplementation(() => Promise.resolve());
+    first.fire({ content: terminal });
+    second.fire({ content: terminal });
+
+    terminal.session.send(STDIN);
+
+    expect(reconnect).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls).toEqual([[STDIN]]);
+  });
+
+  it('leaves a connected, connecting or disposed terminal alone', async () => {
+    const { tracker, fire } = createTracker();
+    await activate(tracker, createRegistry(true));
+    const connected = fakeTerminal('2', 'connected');
+    const connecting = fakeTerminal('3', 'connecting');
+    const disposed = fakeTerminal('4', 'disconnected');
+    disposed.terminal.session.isDisposed = true;
+    const all = [connected, connecting, disposed];
+    all.forEach(({ terminal }) => fire({ content: terminal }));
+
+    setVisibility('visible');
+    goOnline();
+    all.forEach(({ terminal }) => terminal.session.send(STDIN));
+
+    all.forEach(({ reconnect }) => expect(reconnect).not.toHaveBeenCalled());
+  });
+
+  it('starts one reconnect for triggers that arrive together', async () => {
+    const { tracker, fire } = createTracker();
+    await activate(tracker, createRegistry(true));
+    const { terminal, send, reconnect } = fakeTerminal('2', 'disconnected');
+    fire({ content: terminal });
+
+    setVisibility('visible');
+    goOnline();
+    terminal.session.send(STDIN);
+
+    expect(reconnect).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls).toEqual([[STDIN]]);
+  });
+
+  it('adds no listener and reconnects nothing when the switch is off', async () => {
+    const documentListener = jest.spyOn(document, 'addEventListener');
+    const windowListener = jest.spyOn(window, 'addEventListener');
+    try {
+      const { tracker, fire } = createTracker();
+      await activate(tracker, createRegistry(false));
+      const { terminal, reconnect } = fakeTerminal('2', 'disconnected');
+      fire({ content: terminal });
+
+      setVisibility('visible');
+      goOnline();
+      terminal.session.send(STDIN);
+
+      expect(documentListener).not.toHaveBeenCalledWith(
+        'visibilitychange',
+        expect.anything()
+      );
+      expect(windowListener).not.toHaveBeenCalledWith(
+        'online',
+        expect.anything()
+      );
+      expect(reconnect).not.toHaveBeenCalled();
+    } finally {
+      documentListener.mockRestore();
+      windowListener.mockRestore();
+    }
   });
 });
 

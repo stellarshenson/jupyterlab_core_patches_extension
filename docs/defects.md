@@ -43,6 +43,27 @@ Wrong behaviour of one of the eleven patches in ordinary use
   - root-cause: 2026-11-13T07:38:14Z @kj settings.py _settings_path fell back to jupyter_data_dir()/lab/user-settings because ServerApp has no user_settings_dir attribute; JupyterLab stores user settings in LabApp.user_settings_dir (~/.jupyter/lab/user-settings)
   - log: 2026-11-13T07:38:14Z @kj added
   - log: 2026-11-13T07:38:34Z @kj closed
+- [x] `DEF-PATCH-7-TERMINAL-INPUT` **Terminal 1 takes no typed input** - MAJOR; live lab Terminal 1 (pts/2, Claude Code in private/jupyterlab) shows no typed text; the program runs and its pty has 0 queued input bytes; cause unknown, the four terminal patches do not touch stdin; reproduce first
+  - test-tags: UNIT, FUNCTIONAL
+  - evidence: terminal CPR escape patch reconnects a tab JupyterLab gave up on, on page shown, online and typing; ACC-PATCH-44-RECONNECT-VISIBLE to ACC-PATCH-49-RECONNECT-DOCS closed; wf_c28fcb05-5a9 Jest 129, Galata 25/25 on 1.0.33; review wf_8bc58fd2-c0f SHIP
+  - related: ACC-PATCH-44-RECONNECT-VISIBLE, ACC-PATCH-45-RECONNECT-ONLINE, ACC-PATCH-46-RECONNECT-TYPING, ACC-PATCH-47-RECONNECT-ONCE, ACC-PATCH-48-RECONNECT-SWITCH, ACC-PATCH-49-RECONNECT-DOCS
+  - root-cause: 2026-11-16T09:57:34Z @kj likely cause: stock @jupyterlab/services 7.6.5 TerminalConnection stops after 7 failed reconnects (random delay 0 to 2^n-1 s), sets disconnected and never retries; send() queues stdin while not connected, so the tab keeps its last screen and typing appears to do nothing; evidence: no browser websocket for terminal 1 since 08:57 local, 0 browser requests 10:23-10:38, the 10:39 wake reconnected terminals 2 4 6 7 10 11 12 but not 1 or 5
+  - repro: type into Terminal 1 of the live lab after the 2026-11-15 20:02 server start; nothing appears
+  - log: 2026-11-16T09:50:27Z @kj added
+  - log: 2026-11-16T09:57:34Z @kj root-cause recorded; reason: the cause needs the reconnect limit, the queue behaviour and the log evidence in one line
+  - log: 2026-11-16T09:57:34Z @kj not a regression of DEF-free terminal delivery guard (1.0.24, ACC-PATCH-29 to 32): that guard keeps output flowing to attached clients; here no client is attached; guard present in the installed server file
+  - log: 2026-11-16T09:57:40Z @kj correction of the previous line: read 'not a regression of the terminal delivery guard'; 'DEF-free' was a typing error
+  - log: 2026-11-16T09:59:09Z @kj owner confirmed terminal 5 stuck too; terminal 5 was predicted from the log (no browser attach since 07:30 local, missing from the 10:39 reconnect), which supports the root cause
+  - log: 2026-11-16T10:32:50Z @kj closed
+  - log: 2026-11-16T10:32:58Z @kj edited test-tags added "UNIT, FUNCTIONAL"; evidence "terminal CPR escape patch reconnects a tab JupyterLab gave up on, on page shown, online and typing; ACC-PATCH-44 to 49 closed; wf_c28fcb05-5a9 Jest 129, Galata 25/25 on 1.0.33; review wf_8bc58fd2-c0f SHIP" -> "terminal CPR escape patch reconnects a tab JupyterLab gave up on, on page shown, online and typing; ACC-PATCH-44-RECONNECT-VISIBLE to ACC-PATCH-49-RECONNECT-DOCS closed; wf_c28fcb05-5a9 Jest 129, Galata 25/25 on 1.0.33; review wf_8bc58fd2-c0f SHIP"
+- [x] `DEF-PATCH-8-TRASH-SPEC` **File delete Galata spec fails beside the advanced file browser 1.0.6** - MEDIUM; ui-tests/tests/file-delete-trash.spec.ts finds the confirm button as .jp-Dialog .jp-mod-warn and expects 'Move to Trash'; with jupyterlab_advanced_file_browser_extension 1.0.6 in /opt/conda the warn button is 'Delete Permanently', and its Move to Trash shows only on a mount it monitors, so the headed suite has 1 failure of 25
+  - evidence: spec finds the confirm button by label 'Move to Trash', test config sets AdvancedFileBrowser.trash_on_all_volumes; verify wf_93caa560-119 6/6 (stock dialog still matches, config harmless without the extension); headed Galata 25/25 on 1.0.35; ponytail Ship
+  - related: ACC-PATCH-40-BROWSER-DELETE
+  - repro: make install, then the headed Galata suite through galata-bwrap.sh with jupyterlab_advanced_file_browser_extension 1.0.6 installed: file-delete-trash.spec.ts:84 received 'Delete Permanently'
+  - test-tags: FUNCTIONAL
+  - root-cause: 2026-11-16T11:41:56Z @kj the spec depends on the stock delete dialog layout; the advanced file browser 1.0.6, installed into /opt/conda at 2026-11-16 12:00:34 by another session, replaces that dialog in every lab that loads from /opt/conda, the Galata lab included
+  - log: 2026-11-16T11:41:56Z @kj added; reason: the cause needs the selector, both extension behaviours and the failing count
+  - log: 2026-11-16T11:57:01Z @kj closed
 
 ## Build and release `BUILD`
 

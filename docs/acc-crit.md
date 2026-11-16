@@ -303,3 +303,78 @@ One settings switch per patch; false returns before patching; all default true.
   - mechanism: 2026-11-13T19:54:49Z @kj one module lock serialises the trash moves of the worker threads, because send2trash picks a free name and renames in two steps
   - log: 2026-11-13T19:54:49Z @kj added
   - log: 2026-11-13T20:34:17Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+- [x] `ACC-PATCH-44-RECONNECT-VISIBLE` **Terminal reconnects when the page is shown** - HIGH; terminal CPR escape patch: a terminal tab whose connection JupyterLab marked disconnected (7 failed reconnects) reconnects when the page becomes visible again; new program output appears in the tab
+  - evidence: Jest 'reconnects a disconnected terminal when the page becomes visible' passes, fails with reconnect removed; Galata 'reconnects a terminal JupyterLab gave up on when the page is shown' passes; run wf_c28fcb05-5a9: Jest 129, headed Galata 25/25 on 1.0.33; review wf_8bc58fd2-c0f round 1 SHIP
+  - test: src/__tests__/terminal-cpr-escape.spec.ts: disconnected session + visibilitychange to visible -> reconnect called once; ui-tests/tests/terminal-cpr-escape.spec.ts: websocket refused until disconnected, then page shown -> new output in the tab
+  - test-tags: UNIT, FUNCTIONAL
+  - log: 2026-11-16T10:00:53Z @kj added
+  - log: 2026-11-16T10:02:07Z @kj edited text "a terminal tab whose connection JupyterLab marked disconnected (7 failed reconnects) reconnects when the page becomes visible again; new program output appears in the tab" -> "terminal CPR escape patch: a terminal tab whose connection JupyterLab marked disconnected (7 failed reconnects) reconnects when the page becomes visible again; new program output appears in the tab"; test "src/__tests__/terminal-reconnect.spec.ts: disconnected session + visibilitychange to visible -> reconnect called once; ui-tests/tests/terminal-reconnect.spec.ts: websocket refused until disconnected, then shown -> new output in the tab" -> "src/__tests__/terminal-cpr-escape.spec.ts: disconnected session + visibilitychange to visible -> reconnect called once; ui-tests/tests/terminal-cpr-escape.spec.ts: websocket refused until disconnected, then page shown -> new output in the tab"
+  - log: 2026-11-16T10:32:36Z @kj closed
+- [x] `ACC-PATCH-45-RECONNECT-ONLINE` **Terminal reconnects when the network is back** - HIGH; terminal CPR escape patch: a disconnected terminal tab reconnects when the browser fires the online event
+  - evidence: Jest 'reconnects a disconnected terminal when the browser fires online' passes, fails with reconnect removed; run wf_c28fcb05-5a9: Jest 129, headed Galata 25/25 on 1.0.33; review wf_8bc58fd2-c0f round 1 SHIP
+  - test: src/__tests__/terminal-cpr-escape.spec.ts: disconnected session + window online event -> reconnect called once
+  - test-tags: UNIT
+  - log: 2026-11-16T10:00:53Z @kj added
+  - log: 2026-11-16T10:02:07Z @kj edited text "a disconnected terminal tab reconnects when the browser fires the online event" -> "terminal CPR escape patch: a disconnected terminal tab reconnects when the browser fires the online event"; test "src/__tests__/terminal-reconnect.spec.ts: disconnected session + window online event -> reconnect called once" -> "src/__tests__/terminal-cpr-escape.spec.ts: disconnected session + window online event -> reconnect called once"
+  - log: 2026-11-16T10:32:37Z @kj closed
+- [x] `ACC-PATCH-46-RECONNECT-TYPING` **Typing into a disconnected terminal reconnects it** - HIGH; terminal CPR escape patch: typing into a disconnected terminal tab starts a reconnect; the text typed while disconnected reaches the program after the reconnect, in typed order
+  - evidence: Jest 'reconnects on typed input and sends it after the connection opens, in typed order' and 'keeps the typing trigger after the hold releases send' pass; Galata 'sends text typed into a terminal JupyterLab gave up on' passes; wf_c28fcb05-5a9 Jest 129, Galata 25/25 on 1.0.33; review wf_8bc58fd2-c0f SHIP
+  - test: src/__tests__/terminal-cpr-escape.spec.ts: stdin on a disconnected session -> reconnect called, stdin sent after connect; ui-tests/tests/terminal-cpr-escape.spec.ts: type 'echo back' + Enter while disconnected -> 'back' printed after the reconnect
+  - test-tags: UNIT, FUNCTIONAL
+  - log: 2026-11-16T10:00:53Z @kj added
+  - log: 2026-11-16T10:02:07Z @kj edited text "typing into a disconnected terminal tab starts a reconnect; the text typed while disconnected reaches the program after the reconnect, in typed order" -> "terminal CPR escape patch: typing into a disconnected terminal tab starts a reconnect; the text typed while disconnected reaches the program after the reconnect, in typed order"; test "src/__tests__/terminal-reconnect.spec.ts: stdin on a disconnected session -> reconnect called, stdin queued; ui-tests/tests/terminal-reconnect.spec.ts: type 'echo back' + Enter while disconnected -> 'back' printed after reconnect" -> "src/__tests__/terminal-cpr-escape.spec.ts: stdin on a disconnected session -> reconnect called, stdin sent after connect; ui-tests/tests/terminal-cpr-escape.spec.ts: type 'echo back' + Enter while disconnected -> 'back' printed after the reconnect"
+  - log: 2026-11-16T10:32:50Z @kj closed
+- [x] `ACC-PATCH-47-RECONNECT-ONCE` **Only a given-up terminal is reconnected** - MEDIUM; a trigger reconnects only a terminal in status disconnected; a connected or connecting terminal and a disposed terminal get no reconnect and no extra websocket; triggers arriving together start one reconnect
+  - evidence: Jest 'leaves a connected, connecting or disposed terminal alone' and 'starts one reconnect for triggers that arrive together' pass, the latter fails on mutation; wf_c28fcb05-5a9 Jest 129, Galata 25/25 on 1.0.33; review wf_8bc58fd2-c0f SHIP
+  - test: src/__tests__/terminal-cpr-escape.spec.ts: connected, connecting and disposed sessions -> no reconnect; visibilitychange + online + keystroke together -> one reconnect
+  - test-tags: UNIT
+  - log: 2026-11-16T10:02:07Z @kj added
+  - log: 2026-11-16T10:32:50Z @kj closed
+- [x] `ACC-PATCH-48-RECONNECT-SWITCH` **Reconnect follows the CPR escape switch** - MEDIUM; the reconnect is part of the terminal CPR escape patch, under its switch jupyterlab_terminal_cpr_escape_fix with no new key; false at page load leaves stock JupyterLab: no listener, a given-up terminal stays disconnected
+  - evidence: Jest 'adds no listener and reconnects nothing when the switch is off' passes; no new schema key, only the switch description changed; wf_c28fcb05-5a9 Jest 129, Galata 25/25 on 1.0.33; review wf_8bc58fd2-c0f SHIP
+  - test: src/__tests__/terminal-cpr-escape.spec.ts: switch false -> no listener added, no reconnect on any trigger
+  - test-tags: UNIT
+  - log: 2026-11-16T10:02:07Z @kj added
+  - log: 2026-11-16T10:32:50Z @kj closed
+- [x] `ACC-PATCH-49-RECONNECT-DOCS` **Reconnect documented** - LOW; docs/terminal-cpr-escape.md, the README line of the terminal CPR escape patch, the plugin description and INTENT.md name the reconnect, its three triggers and the patched member; README still lists twelve patches
+  - evidence: grep -ci reconnect: docs/terminal-cpr-escape.md 15, README.md 1, INTENT.md 1, src/fixes/terminal-cpr-escape.ts 11, schema/plugin.json 1; README keeps 12 patch rows; member table lists the four new members
+  - test: grep -i reconnect in docs/terminal-cpr-escape.md, README.md, INTENT.md and src/fixes/terminal-cpr-escape.ts; README patch count unchanged
+  - test-tags: MANUAL
+  - log: 2026-11-16T10:02:08Z @kj added
+  - log: 2026-11-16T10:32:50Z @kj closed
+- [x] `ACC-PATCH-50-TERM-SESSION` **One terminal-session module for both terminal patches** - HIGH; terminal CPR escape and restore terminals register on one shared frontend module that owns each terminal tab: one tracker.widgetAdded handler per page and one session.send wrapper per session, which carries both the size hold and the typing reconnect
+  - evidence: terminal-session.spec.ts 'connects widgetAdded once and wraps send once per session with both plugins on' in both activation orders passes; Jest 138, pytest 211; Galata 25/25 on 1.0.36 (wf_474799f5-acf); review wf_d04e4656-3bf round 2 SHIP
+  - test: Jest: both plugins activated on one tracker -> widgetAdded connected once, session.send replaced once per session; a held background tab still drops set_size and still reconnects on stdin
+  - test-tags: UNIT
+  - log: 2026-11-16T10:46:34Z @kj added
+  - log: 2026-11-16T12:13:55Z @kj closed
+- [x] `ACC-PATCH-51-TERM-SWITCHES` **Each terminal switch still controls its own part** - HIGH; jupyterlab_terminal_cpr_escape_fix off: no hold, no reconnect, no page listeners; jupyterlab_restore_terminals_fix off: no folder reports; both off: the shared module installs nothing; no settings key added, renamed or removed
+  - evidence: terminal-session.spec.ts four switch combinations and 'keeps the plugin ids, the token lists and the terminal schema keys' pass; switch mutation caught; Galata 25/25 on 1.0.36 (wf_474799f5-acf); review wf_d04e4656-3bf round 2 SHIP
+  - test: Jest: the four switch combinations -> only the enabled parts act; schema/plugin.json keys unchanged
+  - test-tags: UNIT
+  - log: 2026-11-16T10:46:34Z @kj added
+  - log: 2026-11-16T12:13:55Z @kj closed
+- [x] `ACC-PATCH-52-TERM-EVENTS` **One owner for terminal page events and timers** - MEDIUM; the shared module owns the page-level terminal listeners and timers: visibilitychange, online, the 15 s folder report and the post-open report retries; each is installed once per page
+  - evidence: terminal-session.spec.ts 'installs each page listener and the 15 s interval once with both plugins on' and 'installs no page listener and no timer with both plugins off' pass; Galata 25/25 on 1.0.36 (wf_474799f5-acf); review wf_d04e4656-3bf round 2 SHIP
+  - test: Jest: each listener and the 15 s interval installed once with both plugins on, none with both off
+  - test-tags: UNIT
+  - log: 2026-11-16T10:46:35Z @kj added
+  - log: 2026-11-16T12:13:55Z @kj closed
+- [x] `ACC-PATCH-53-TERM-SHELLS` **One server helper for terminal processes** - MEDIUM; server: terminal_cpr_escape.py and restore_terminals.py read the shell names and the /proc process data through one shared module; the shell name list is defined once
+  - evidence: test_terminal_processes.py: one shell set used by both modules, one shell list definition under server/, both modules read /proc through server/terminal_processes.py; pytest 211; Galata 25/25 on 1.0.36 (wf_474799f5-acf); review wf_d04e4656-3bf round 2 SHIP
+  - test: pytest: both modules use the one shell set; grep finds one shell list definition under jupyterlab_core_patches_extension/server/
+  - test-tags: UNIT
+  - log: 2026-11-16T10:46:35Z @kj added
+  - log: 2026-11-16T12:13:55Z @kj closed
+- [x] `ACC-PATCH-54-TERM-KEPT` **Terminal behaviour unchanged by the integration** - HIGH; the existing terminal CPR escape and restore terminals Jest, pytest and headed Galata tests pass, with edits limited to import paths; the reconnect criteria ACC-PATCH-44-RECONNECT-VISIBLE to ACC-PATCH-49-RECONNECT-DOCS still hold
+  - evidence: existing terminal Jest and pytest specs pass with import-path and patch-target edits only; reconnect tests unchanged; make test Jest 138, pytest 211; Galata 25/25 on 1.0.36 (wf_474799f5-acf); review wf_d04e4656-3bf round 2 SHIP
+  - test: make test green; headed Galata suite green, terminal-cpr-escape and restore-terminals specs included
+  - test-tags: UNIT, FUNCTIONAL
+  - log: 2026-11-16T10:46:35Z @kj added
+  - log: 2026-11-16T12:13:55Z @kj closed
+- [x] `ACC-PATCH-55-TERM-DOCS` **Shared terminal module documented** - LOW; docs/terminal-cpr-escape.md and docs/restore-terminals.md describe the shared terminal-session module and the shared server helper, each member in a member table; README still lists twelve patches
+  - evidence: docs/terminal-cpr-escape.md and docs/restore-terminals.md name terminal-session.ts and terminal_processes.py with every member in a member table; release row corrected in round 1; README keeps 12 patches; Galata 25/25 on 1.0.36 (wf_474799f5-acf); review wf_d04e4656-3bf round 2 SHIP
+  - test: grep the shared module and helper names in both docs pages; README patch rows 12
+  - test-tags: MANUAL
+  - log: 2026-11-16T10:46:35Z @kj added
+  - log: 2026-11-16T12:13:55Z @kj closed

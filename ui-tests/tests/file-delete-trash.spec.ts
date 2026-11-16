@@ -80,7 +80,11 @@ test('a file browser delete moves the file into the trash folder of its mount', 
     .locator('.lm-Menu')
     .getByText('Move to Trash', { exact: true })
     .click();
-  const confirm = page.locator('.jp-Dialog .jp-mod-warn');
+  // Stock JupyterLab shows Move to Trash as the warn button; the advanced file
+  // browser extension shows it as the default button beside Delete Permanently.
+  const confirm = page.locator('.jp-Dialog .jp-Dialog-button', {
+    hasText: 'Move to Trash'
+  });
   await expect(confirm).toHaveText('Move to Trash');
   await confirm.click();
 

@@ -11,6 +11,11 @@ import { expect, IJupyterLabPageFixture, test } from '@jupyterlab/galata';
  * The server-side response filter has no Galata test: the idle-reconnect text
  * it removes needs a shell that strips ESC from a CPR response (fish), which
  * the test server does not guarantee.
+ *
+ * The reconnect tests route the terminal websocket through the test, so a
+ * dropped connection and refused retries are made on demand. They lower the
+ * session's retry limit from 7 to 1: JupyterLab then gives up after one
+ * refused retry instead of after up to 120 s of random delays.
  */
 
 /**
@@ -121,24 +126,33 @@ async function terminalState(
 }
 
 /**
+ * The xterm buffer lines of terminal `name`, without trailing spaces.
+ */
+async function bufferLines(
+  page: IJupyterLabPageFixture,
+  name: string
+): Promise<string[]> {
+  return page.evaluate((name: string) => {
+    const widget = Array.from(
+      (window as any).jupyterapp.shell.widgets('main')
+    ).find((w: any) => w.content?.session?.name === name) as any;
+    const buffer = widget?.content?._term?.buffer.active;
+    const lines: string[] = [];
+    for (let i = 0; i < (buffer?.length ?? 0); i++) {
+      lines.push(buffer.getLine(i)?.translateToString(true) ?? '');
+    }
+    return lines;
+  }, name);
+}
+
+/**
  * The xterm buffer of terminal `name` as text.
  */
 async function bufferText(
   page: IJupyterLabPageFixture,
   name: string
 ): Promise<string> {
-  return page.evaluate((name: string) => {
-    const widget = Array.from(
-      (window as any).jupyterapp.shell.widgets('main')
-    ).find((w: any) => w.content?.session?.name === name) as any;
-    const buffer = widget?.content?._term?.buffer.active;
-    let text = '';
-    for (let i = 0; i < (buffer?.length ?? 0); i++) {
-      const line = buffer.getLine(i);
-      text += line?.translateToString(true) ?? '';
-    }
-    return text;
-  }, name);
+  return (await bufferLines(page, name)).join('');
 }
 
 /**
@@ -250,6 +264,78 @@ async function showBackgroundTerminal(
   return { name, since };
 }
 
+/**
+ * The test's control over the page's terminal websockets.
+ */
+interface ITerminalRoute {
+  /** True closes every new terminal socket at once, as an unreachable server does. */
+  refuse: boolean;
+  /** Close the newest socket that reached the server. */
+  closeLive: () => Promise<void>;
+}
+
+/**
+ * Route the page's terminal websockets through the test. Call it before
+ * `page.goto()`: only sockets created after the call are routed. A socket is
+ * closed with code 4000 while `refuse` is true and connected to the server
+ * otherwise; JupyterLab retries after any code other than 1000 and 1001.
+ */
+async function routeTerminals(
+  page: IJupyterLabPageFixture
+): Promise<ITerminalRoute> {
+  const route: ITerminalRoute = {
+    refuse: false,
+    closeLive: async () => undefined
+  };
+  await page.routeWebSocket(/\/terminals\/websocket\//, ws => {
+    if (route.refuse) {
+      void ws.close({ code: 4000, reason: 'refused by the test' });
+      return;
+    }
+    ws.connectToServer();
+    route.closeLive = () =>
+      ws.close({ code: 4000, reason: 'dropped by the test' });
+  });
+  return route;
+}
+
+/**
+ * Create a terminal in front and wait until its xterm is open and its session
+ * is connected.
+ */
+async function openTerminal(page: IJupyterLabPageFixture): Promise<string> {
+  const name = await createTerminal(page);
+  await expect
+    .poll(() => terminalState(page, name))
+    .toEqual({ visible: true, opened: true });
+  await waitConnected(page, name);
+  return name;
+}
+
+/**
+ * Bring terminal `name` to the state JupyterLab leaves after its last failed
+ * retry: status `disconnected` and no retry scheduled. Lowers the session's
+ * retry limit to 1, drops the live socket and refuses the one retry, then lets
+ * new sockets reach the server again.
+ */
+async function giveUp(
+  page: IJupyterLabPageFixture,
+  route: ITerminalRoute,
+  name: string
+): Promise<void> {
+  await page.evaluate(
+    `(${findWidget(name)}).content.session._reconnectLimit = 1`
+  );
+  route.refuse = true;
+  await route.closeLive();
+  await page.waitForFunction(
+    `(${findWidget(name)})?.content?.session?.connectionStatus === 'disconnected'`,
+    undefined,
+    { timeout: 10000 }
+  );
+  route.refuse = false;
+}
+
 test.use({ autoGoto: false });
 
 test('leaves a restored background terminal to JupyterLab when the switch is off', async ({
@@ -301,4 +387,54 @@ test('leaves the terminal to JupyterLab when redrawBackgroundTerminals is off', 
   const { name, since } = await showBackgroundTerminal(page, watch);
 
   expect(watch.since(name, 'open', since)).toHaveLength(1);
+});
+
+test('reconnects a terminal JupyterLab gave up on when the page is shown', async ({
+  page
+}) => {
+  const route = await routeTerminals(page);
+  await page.goto();
+  await setSwitch(page, SWITCH_KEY, true);
+  const name = await openTerminal(page);
+
+  // The command line holds `$((40+2))`; only the output holds the marker.
+  await page.evaluate(`(${findWidget(name)}).content._term.focus()`);
+  await page.keyboard.insertText('sleep 5; echo MKR-VISIBLE-$((40+2))');
+  await page.keyboard.press('Enter');
+  await expect
+    .poll(() => bufferText(page, name), { timeout: 20000 })
+    .toContain('echo MKR-VISIBLE-');
+  await giveUp(page, route, name);
+  expect(await bufferText(page, name)).not.toContain('MKR-VISIBLE-42');
+
+  await page.evaluate(() => {
+    if (document.visibilityState !== 'visible') {
+      throw new Error('the test page is not visible');
+    }
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+
+  await waitConnected(page, name);
+  await expect
+    .poll(() => bufferText(page, name), { timeout: 20000 })
+    .toContain('MKR-VISIBLE-42');
+});
+
+test('sends text typed into a terminal JupyterLab gave up on after the reconnect', async ({
+  page
+}) => {
+  const route = await routeTerminals(page);
+  await page.goto();
+  await setSwitch(page, SWITCH_KEY, true);
+  const name = await openTerminal(page);
+  await giveUp(page, route, name);
+
+  await page.evaluate(`(${findWidget(name)}).content._term.focus()`);
+  await page.keyboard.type('echo back');
+  await page.keyboard.press('Enter');
+
+  await waitConnected(page, name);
+  await expect
+    .poll(() => bufferLines(page, name), { timeout: 20000 })
+    .toContain('back');
 });

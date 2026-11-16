@@ -17,7 +17,7 @@ Each source project sits beside this one under `/home/lab/workspace/private/jupy
 | jupyterlab_other_file_type_menu_fix          | context menu for unregistered file types and the LSP mimeTypes crash |
 | jupyterlab_restore_terminals_fix             | terminal working directories after a workspace restore               |
 | jupyterlab_server_proxy_launcher_fix         | SVG icons of server-proxy launchers in custom categories             |
-| jupyterlab_terminal_cpr_escape_fix           | CPR escape text in idle terminals                                    |
+| jupyterlab_terminal_cpr_escape_fix           | CPR escape text in idle terminals; reconnect of dropped terminals    |
 
 ## Twelfth patch, added 2026-11-13
 
