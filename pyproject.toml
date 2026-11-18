@@ -26,6 +26,9 @@ dependencies = [
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 
+[project.scripts]
+trash-put = "jupyterlab_core_patches_extension.cli.trash_put:main"
+
 [project.optional-dependencies]
 dev = [
     "jupyterlab>=4.6,<5",
@@ -54,6 +57,7 @@ exclude = [".github", "binder"]
 "jupyterlab_core_patches_extension/labextension" = "share/jupyter/labextensions/@stellarshenson/jupyterlab-core-patches-extension"
 "install.json" = "share/jupyter/labextensions/@stellarshenson/jupyterlab-core-patches-extension/install.json"
 "jupyter-config/server-config" = "etc/jupyter/jupyter_server_config.d"
+".agents/skills/jupyterlab-core-patches-extension" = "share/jupyter/agents/skills/jupyterlab-core-patches-extension"
 
 [tool.hatch.build.hooks.version]
 path = "jupyterlab_core_patches_extension/_version.py"

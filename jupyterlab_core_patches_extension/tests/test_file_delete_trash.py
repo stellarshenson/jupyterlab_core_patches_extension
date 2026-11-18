@@ -33,6 +33,7 @@ import jupyterlab_core_patches_extension.server as server_package
 
 MODULE = "jupyterlab_core_patches_extension.server.file_delete_trash"
 EXT = importlib.import_module(MODULE)
+TRASH = importlib.import_module("jupyterlab_core_patches_extension.trash")
 PROJECT_ROOT = Path(__file__).parents[2]
 UID = os.getuid()
 APP = SimpleNamespace(log=logging.getLogger(__name__))
@@ -223,7 +224,7 @@ def test_cross_mount_delete_reads_mount_points(tmp_path, monkeypatch):
         b"2 1 8:48 /home /home rw - ext4 /dev/sdd rw\n"
         b"3 2 8:48 /work /home/lab/my\\040work rw - ext4 /dev/sdd rw\n"
     )
-    monkeypatch.setattr(EXT, "open", lambda path, mode: open(info, mode), raising=False)
+    monkeypatch.setattr(TRASH, "open", lambda path, mode: open(info, mode), raising=False)
 
     mounts = EXT._mounts()
 

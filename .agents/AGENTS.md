@@ -64,7 +64,7 @@ If the extension ships a command-line tool, the entry point under `[project.scri
 - **Same commit** - the skill and the `--help` text change in the commit that changes the CLI
 - **Reference** - `/home/lab/workspace/private/jupyterlab/jupyterlab_notifications_extension`
 
-This extension currently ships no CLI.
+The extension ships the `trash-put` console script from `[project.scripts]` (`jupyterlab_core_patches_extension.cli.trash_put:main`). Its agent skill is at `.agents/skills/jupyterlab-core-patches-extension/SKILL.md`, shipped through `[tool.hatch.build.targets.wheel.shared-data]`.
 
 ## Scope Control
 

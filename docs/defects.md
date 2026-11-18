@@ -64,6 +64,13 @@ Wrong behaviour of one of the eleven patches in ordinary use
   - root-cause: 2026-11-16T11:41:56Z @kj the spec depends on the stock delete dialog layout; the advanced file browser 1.0.6, installed into /opt/conda at 2026-11-16 12:00:34 by another session, replaces that dialog in every lab that loads from /opt/conda, the Galata lab included
   - log: 2026-11-16T11:41:56Z @kj added; reason: the cause needs the selector, both extension behaviours and the failing count
   - log: 2026-11-16T11:57:01Z @kj closed
+- [-] `DEF-PATCH-9-TRASH-ROUTING` **Workspace files deleted with trash-put land in the home trash** - MEDIUM; Workspace files deleted with the trash-put command land in ~/.local/share/Trash with an Original path under /home/lab/workspace; 20 such entries exist, latest 2026-11-18 15:28. A contents-API delete lands in /home/lab/workspace/.Trash-1000 (204). The lab log has no DELETE /api/contents before the test.
+  - repro: trash-put a scratch file under /home/lab/workspace, then read ~/.local/share/Trash/info: Original is the workspace path. Create a second scratch file under /home/lab/workspace, delete it through the file browser: it appears in /home/lab/workspace/.Trash-1000/files, not the home trash. One-delete test 2026-11-18 (1.0.37, pid 457): contents-API delete 204, no home-trash entry.
+  - test-tags: MANUAL
+  - root-cause: 2026-11-18T17:15:24Z @kj trash-cli 0.23.11.10 writes the item to the home trash; the patch wraps AsyncFileContentsManager.delete_file only, so CLI deletes never reach it. Lab log: no DELETE /api/contents before the test, so the home-trash workspace entries were made outside the file browser.
+  - log: 2026-11-18T17:15:24Z @kj added
+  - log: 2026-11-18T17:18:58Z @kj rejected: by design: trash-put writes to the home trash under the freedesktop spec because the bind mounts report one device; the extension's file-browser path lands in the mount trash (one-delete test 2026-11-18); owner decision 2026-11-18
+  - log: 2026-11-18T17:34:34Z @kj edited repro "trash-put a scratch file under /home/lab/workspace, then read ~/.local/share/Trash/info: Original is the workspace path. Delete the same file through the file browser: it appears in /home/lab/workspace/.Trash-1000/files, not the home trash. One-delete test 2026-11-18 (1.0.37, pid 457): contents-API delete 204, no home-trash entry." -> "trash-put a scratch file under /home/lab/workspace, then read ~/.local/share/Trash/info: Original is the workspace path. Create a second scratch file under /home/lab/workspace, delete it through the file browser: it appears in /home/lab/workspace/.Trash-1000/files, not the home trash. One-delete test 2026-11-18 (1.0.37, pid 457): contents-API delete 204, no home-trash entry."
 
 ## Build and release `BUILD`
 

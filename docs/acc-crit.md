@@ -245,6 +245,7 @@ One settings switch per patch; false returns before patching; all default true.
   - log: 2026-11-13T19:54:49Z @kj edited test "pytest -k delete_keeps_loop_responsive: slow send2trash stand-in, assert the largest event-loop gap stays under 0.3 s; with the switch off the gap is the full call" -> "pytest -k delete_keeps_loop_responsive: slow send2trash stand-in (1.0 s), assert the largest event-loop gap stays under 0.5 s; with the switch off the gap is the full call"
   - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
 - [x] `ACC-PATCH-34-MOUNT-TRASH` **Cross-mount delete is a rename** - HIGH; a path on a mount other than the home trash's mount moves into that mount's .Trash-<uid> by rename; no copy, nothing added to the home trash
+  - related: DEF-PATCH-9-TRASH-ROUTING
   - evidence: pytest -k cross_mount_delete 3 passed, real bind mounts under bwrap included: item keeps its inode in <vol>/.Trash-1000, no shutil.move; stock copies into the home trash; final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
   - test: pytest -k cross_mount_delete: simulated mounts with EXDEV, and real bind mounts under bwrap; assert the item lands in <mount>/.Trash-<uid>/files and shutil.move is never called
   - test-tags: UNIT, INTEGRATION
@@ -252,6 +253,7 @@ One settings switch per patch; false returns before patching; all default true.
   - mechanism: 2026-11-13T19:08:43Z @kj compare kernel mount ids (/proc/self/fdinfo mnt_id) of the path and the home trash, because os.path.ismount and st_dev cannot tell bind mounts of one disk apart; mount point from /proc/self/mountinfo
   - log: 2026-11-13T19:08:43Z @kj added
   - log: 2026-11-13T20:34:16Z @kj closed: closed: review wf_faaf54d7-ad2 round 2 SHIP
+  - log: 2026-11-18T17:18:55Z @kj verified 2026-11-18 on the live lab (1.0.37, pid 457): contents-API delete of /home/lab/workspace/.trash-probe-1795025000.txt returned 204 and the file landed in /home/lab/workspace/.Trash-1000/files; DEF-PATCH-9 covers the trash-put path
 - [x] `ACC-PATCH-35-TRASHINFO-PATH` **Original path recorded without dotdot** - MEDIUM; the .trashinfo Path of an item moved into a mount trash holds no '..', also when the path is reached through a symlinked parent folder
   - evidence: pytest -k symlinked_parent_trashinfo 1 passed: trashinfo Path is the name, no '..'; fails before the patch; final gate wf_e7f6844e-bbc: make test Jest 121, pytest 206; headed Galata 23/23
   - test: pytest -k symlinked_parent_trashinfo: delete through a symlinked parent, assert the trashinfo Path is the name under the mount
@@ -378,3 +380,40 @@ One settings switch per patch; false returns before patching; all default true.
   - test-tags: MANUAL
   - log: 2026-11-16T10:46:35Z @kj added
   - log: 2026-11-16T12:13:55Z @kj closed
+- [x] `ACC-PATCH-56-TRASH-CLI` **Extension ships a trash-put CLI** - HIGH; the extension ships a trash-put console script from project.scripts; installed in the lab environment it resolves before /usr/bin/trash-put on the lab PATH, and --help states the cross-mount move and the fallback
+  - evidence: pytest test_entry_point_registered, test_help_names_cross_mount_and_stock_fallback, test_installed_script_resolves_before_stock; venv install proof: bin/trash-put resolved first, --help exit 0; make test Jest 138, pytest 238; review wf_556a0bc9-cf9 SHIP round 3
+  - test: pytest jupyterlab_core_patches_extension/tests/test_trash_cli.py::test_installed_script_resolves_before_stock; the wheel-venv install and the shutil.which precedence proof are recorded in tmp/workflows/trash-cli/verify.json
+  - test-tags: UNIT, INTEGRATION
+  - mechanism: 2026-11-18T17:56:15Z @kj console script named trash-put installed into the environment's bin, which precedes /usr/bin on the lab PATH
+  - log: 2026-11-18T17:56:15Z @kj added
+  - log: 2026-11-18T18:11:58Z @kj edited test "pytest tests/test_trash_cli.py: the entry point is in pyproject; --help exits 0 and names the override; a scratch venv install puts its bin ahead of /usr/bin in shutil.which" -> "pytest jupyterlab_core_patches_extension/tests/test_trash_cli.py::test_installed_script_resolves_before_stock; the wheel-venv install and the shutil.which precedence proof are recorded in tmp/workflows/trash-cli/verify.json"
+  - log: 2026-11-18T19:02:18Z @kj closed: closed: review wf_556a0bc9-cf9 round 3 SHIP
+- [x] `ACC-PATCH-57-TRASH-MOUNT` **CLI cross-mount delete is a rename** - HIGH; a path on a mount other than the home trash's is renamed into <mount>/.Trash-<uid> with a .trashinfo recording the original path; nothing is copied and nothing enters the home trash
+  - evidence: pytest test_cross_mount_path_is_a_rename (inode kept, home trash absent), test_nested_path_records_relative_trashinfo_path, test_failed_rename_leaves_item_and_exits_1, test_cross_mount_path_on_real_bind_mounts (bwrap); make test Jest 138, pytest 238; review wf_556a0bc9-cf9 SHIP round 3
+  - test: pytest tests/test_trash_cli.py: simulated mounts keep the inode and leave the home trash empty; the real bind mounts under bubblewrap when available
+  - test-tags: UNIT, INTEGRATION
+  - mechanism: 2026-11-18T17:56:15Z @kj the same mount logic as the server patch: mountinfo by longest path prefix, rename through send2trash's plat_other.trash_move
+  - log: 2026-11-18T17:56:15Z @kj added
+  - log: 2026-11-18T19:02:18Z @kj closed: closed: review wf_556a0bc9-cf9 round 3 SHIP
+- [x] `ACC-PATCH-58-TRASH-STOCK` **CLI falls back to the stock trash-put** - MEDIUM; same-mount paths, any argument that starts with a hyphen, and a mount trash that cannot be found or created are passed to /usr/bin/trash-put unchanged; its exit code and output pass through
+  - evidence: pytest test_same_mount_path_goes_to_stock, test_option_goes_to_stock, test_no_arguments_go_to_stock, test_missing_path_goes_to_stock, test_dot_spellings_and_root_go_to_stock (8 spellings), test_unusable_mount_trash_goes_to_stock, test_mixed_mount_list_goes_to_stock_unchanged; make test Jest 138, pytest 238; review wf_556a0bc9-cf9 SHIP round 3
+  - test: pytest tests/test_trash_cli.py: a recorded exec argv shows the forward for a same-mount path, --version and a read-only mount root; the exit code propagates
+  - test-tags: UNIT
+  - mechanism: 2026-11-18T17:56:15Z @kj the wrapper handles only cross-mount plain paths and defers every other case to the stock command
+  - log: 2026-11-18T17:56:15Z @kj added
+  - log: 2026-11-18T19:02:18Z @kj closed: closed: review wf_556a0bc9-cf9 round 3 SHIP
+- [x] `ACC-PATCH-59-TRASH-SKILL` **CLI ships its agent skill** - MEDIUM; the agent skill ships at .agents/skills/jupyterlab-core-patches-extension/SKILL.md and in the wheel through shared-data, in the same commit as the CLI
+  - evidence: pytest test_skill_file_documents_the_cli and test_shared_data_ships_the_skill; the built wheel lists .agents/skills/jupyterlab-core-patches-extension/SKILL.md under shared-data; make test Jest 138, pytest 238; review wf_556a0bc9-cf9 SHIP round 3
+  - test: pytest: the skill file exists with the CLI usage; pyproject shared-data maps it; the built wheel lists it
+  - test-tags: UNIT, INTEGRATION
+  - mechanism: 2026-11-18T17:56:15Z @kj the project rule for a shipped CLI
+  - log: 2026-11-18T17:56:15Z @kj added
+  - log: 2026-11-18T19:02:19Z @kj closed: closed: review wf_556a0bc9-cf9 round 3 SHIP
+- [x] `ACC-PATCH-60-TRASH-DOCS` **CLI documented** - LOW; README and docs/file-delete-trash.md name the CLI, the PATH precedence over /usr/bin/trash-put and the fallback
+  - evidence: pytest test_docs_page_names_the_cli and test_readme_mentions_the_cli; README row and docs Command line section name the CLI, the PATH precedence and the fallback; make test Jest 138, pytest 238; review wf_556a0bc9-cf9 SHIP round 3
+  - test: pytest jupyterlab_core_patches_extension/tests/test_trash_cli.py::test_docs_page_names_the_cli and ::test_readme_mentions_the_cli
+  - test-tags: UNIT
+  - mechanism: 2026-11-18T17:56:16Z @kj documentation follows the shipped-CLI rule
+  - log: 2026-11-18T17:56:16Z @kj added
+  - log: 2026-11-18T18:11:58Z @kj edited test "pytest test_docs.py: the docs page names the trash-put CLI and the README links the page" -> "pytest jupyterlab_core_patches_extension/tests/test_trash_cli.py::test_docs_page_names_the_cli and ::test_readme_mentions_the_cli"
+  - log: 2026-11-18T19:02:19Z @kj closed: closed: review wf_556a0bc9-cf9 round 3 SHIP

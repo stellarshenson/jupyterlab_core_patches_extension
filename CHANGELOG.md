@@ -2,6 +2,16 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.38] - 2026-11-18
+
+### Added
+
+- A `trash-put` console script from `[project.scripts]`: a file deleted on a mount other than the home trash's is renamed into `<mount>/.Trash-<uid>` with its `.trashinfo`, so a workspace delete neither copies into the home trash nor stalls; a same-mount path, an option, a dot spelling, a missing path and an unusable mount trash pass unchanged to `/usr/bin/trash-put` with its exit code; the environment bin precedes `/usr/bin` on the lab PATH; the script ships with `--help` and its agent skill in the wheel
+
+### Changed
+
+- `docs/file-delete-trash.md` states in its Limits that a stock `trash-put` delete lands in the home trash at `~/.local/share/Trash` under the freedesktop spec because the bind mounts report one device, while this patch covers the contents-manager path the file browser uses, which lands in `<mount>/.Trash-<uid>`; the trackers record `DEF-PATCH-9-TRASH-ROUTING` rejected as by design and the 2026-11-18 one-delete verification on `ACC-PATCH-34-MOUNT-TRASH`
+
 ## [1.0.37] - 2026-11-16
 
 ### Fixed
