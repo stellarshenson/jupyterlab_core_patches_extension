@@ -17,6 +17,7 @@ jest.mock('@jupyterlab/ui-components', () => ({
 import { ServerConnection } from '@jupyterlab/services';
 import { LabIcon } from '@jupyterlab/ui-components';
 
+import plugin from '../fixes/server-proxy-launcher';
 import {
   createTextIcon,
   fetchSvgIcon
@@ -70,7 +71,8 @@ function processEntry(
  */
 function fakeCommands(): any {
   return {
-    icon: (id: string) => `stock:${id}`
+    icon: (id: string) => `stock:${id}`,
+    execute: async () => undefined
   };
 }
 
@@ -326,5 +328,139 @@ describe('installServerProxyLauncherFix', () => {
     expect(await installServerProxyLauncherFix(commands, load)).toBe(false);
     expect(commands.icon).toBe(wrapper);
     expect(load).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('server-proxy:open reload argument', () => {
+  /** The id of the server-proxy tab, which stock gives its IFrame widget. */
+  const TAB_ID = 'server-proxy:demo';
+
+  /** The second URL, resolved against the jsdom base URL as stock resolves it. */
+  const RELOADED_URL = 'http://localhost/proxy/1234/second.html';
+
+  /**
+   * Build a tab widget whose frame records every URL the wrapper loads.
+   *
+   * @returns The widget and the list of loaded URLs
+   */
+  function fakeTab(): { widget: any; loads: string[] } {
+    const loads: string[] = [];
+    const content = {
+      set url(value: string) {
+        loads.push(value);
+      }
+    };
+    return { widget: { content }, loads };
+  }
+
+  /**
+   * Install the patch over a stock execute that opens the tab when it is not
+   * open and returns the given tab widget.
+   *
+   * @param widget - The widget stock execute returns
+   * @returns The patched registry and the stock execute mock
+   */
+  async function install(
+    widget: any
+  ): Promise<{ commands: any; stock: jest.Mock }> {
+    const commands = fakeCommands();
+    const stock = jest.fn(async () => {
+      if (!document.getElementById(TAB_ID)) {
+        openTab();
+      }
+      return widget;
+    });
+    commands.execute = stock;
+    await installServerProxyLauncherFix(commands, async () => ({
+      server_processes: []
+    }));
+    return { commands, stock };
+  }
+
+  /**
+   * Put the IFrame node of an open server-proxy tab into the page.
+   */
+  function openTab(): void {
+    const node = document.createElement('div');
+    node.id = TAB_ID;
+    document.body.appendChild(node);
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    jest.restoreAllMocks();
+  });
+
+  it('ACC-PATCH-61-RELOAD-OPEN: reload loads the url in the open tab and leaves a tab it opens to stock', async () => {
+    const { widget, loads } = fakeTab();
+    const { commands, stock } = await install(widget);
+
+    // No open tab: stock opens it with the URL, the wrapper loads nothing.
+    const first = { id: TAB_ID, url: '/proxy/1234/first.html', reload: true };
+    await expect(commands.execute('server-proxy:open', first)).resolves.toBe(
+      widget
+    );
+    expect(loads).toEqual([]);
+
+    // The tab the first call opened is open: reload loads the second URL.
+    const second = { id: TAB_ID, url: '/proxy/1234/second.html', reload: true };
+    await expect(commands.execute('server-proxy:open', second)).resolves.toBe(
+      widget
+    );
+    expect(stock).toHaveBeenLastCalledWith('server-proxy:open', second);
+    expect(loads).toEqual([RELOADED_URL]);
+  });
+
+  it('ACC-PATCH-62-RELOAD-STOCK: a call without reload reaches stock execute and leaves the frame url', async () => {
+    const { widget, loads } = fakeTab();
+    const { commands, stock } = await install(widget);
+    openTab();
+
+    const args = { id: TAB_ID, url: '/proxy/1234/second.html' };
+    await expect(commands.execute('server-proxy:open', args)).resolves.toBe(
+      widget
+    );
+    expect(stock).toHaveBeenCalledWith('server-proxy:open', args);
+    expect(loads).toEqual([]);
+
+    // Control: the same open tab loads the URL once reload is set.
+    await commands.execute('server-proxy:open', { ...args, reload: true });
+    expect(loads).toEqual([RELOADED_URL]);
+  });
+
+  it('ACC-PATCH-62-RELOAD-STOCK: with the switch off the reload argument does nothing', async () => {
+    jest
+      .spyOn(ServerConnection as any, 'makeSettings')
+      .mockReturnValue({ baseUrl: 'http://localhost/' });
+    jest
+      .spyOn(ServerConnection as any, 'makeRequest')
+      .mockResolvedValue({ ok: false, status: 404 });
+    openTab();
+
+    /**
+     * Activate the plugin with the switch value, then run one reload call.
+     *
+     * @param enabled - The value of the patch switch
+     * @returns The URLs the wrapper loaded into the open tab
+     */
+    async function reloadWithSwitch(enabled: boolean): Promise<string[]> {
+      const { widget, loads } = fakeTab();
+      const commands = fakeCommands();
+      commands.execute = async () => widget;
+      const registry = {
+        load: async () => ({ get: () => ({ composite: enabled }) })
+      };
+      await plugin.activate({ commands } as any, registry as any);
+      await commands.execute('server-proxy:open', {
+        id: TAB_ID,
+        url: '/proxy/1234/second.html',
+        reload: true
+      });
+      return loads;
+    }
+
+    expect(await reloadWithSwitch(false)).toEqual([]);
+    // Control: with the switch on the same call loads the URL.
+    expect(await reloadWithSwitch(true)).toEqual([RELOADED_URL]);
   });
 });

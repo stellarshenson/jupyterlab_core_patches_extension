@@ -1,3 +1,5 @@
+import { PageConfig } from '@jupyterlab/coreutils';
+
 import { LabIcon } from '@jupyterlab/ui-components';
 
 import { createTextIcon, fetchSvgIcon } from './iconUtils';
@@ -9,14 +11,14 @@ import {
 } from './serverInfo';
 
 /**
- * The command whose icon the wrapper answers from the launcher icon cache.
+ * The command both wrappers answer.
  */
 const SERVER_PROXY_COMMAND = 'server-proxy:open';
 
 /**
- * The marker set on the command registry once the icon wrapper is installed.
+ * The marker set on the command registry before either wrapper is installed.
  * A second install call reads it and returns `false`, so a duplicated package
- * cannot wrap the stock method twice.
+ * cannot wrap the stock methods twice.
  */
 export const PATCH_MARKER = '__serverProxyLauncherFixPatched';
 
@@ -87,11 +89,46 @@ function wrapCommandsIcon(commands: any): void {
 }
 
 /**
- * Install the launcher icon patch on one command registry: fetch the
- * server-proxy configuration, cache one icon per non-kernel launcher entry and
- * wrap `commands.icon`.
+ * Wrap `commands.execute` so `server-proxy:open` with `reload: true` loads
+ * `args.url` in the tab that already shows `args.id`.
  *
- * @param commands - The command registry whose `icon` method is wrapped
+ * Stock execute still validates the URL and activates the tab; the wrapper
+ * then sets the frame URL, resolved against the base URL as stock resolves it.
+ * A call without `reload`, or for a tab that is not open, is stock.
+ *
+ * @param commands - The command registry to patch
+ */
+function wrapCommandsExecute(commands: any): void {
+  const originalExecute = commands.execute.bind(commands);
+  commands.execute = (id: string, args: any = {}) => {
+    // Looked up before stock execute, so a tab this call opens is not loaded
+    // twice. Stock gives the tab's IFrame widget the id `args.id`.
+    const open =
+      id === SERVER_PROXY_COMMAND &&
+      args.reload &&
+      document.getElementById(args.id);
+    const result = originalExecute(id, args);
+    if (!open) {
+      return result;
+    }
+    return result.then((widget: any) => {
+      // Stock opens a browser tab for `newBrowserTab` and returns no widget.
+      if (widget) {
+        widget.content.url = new URL(args.url, PageConfig.getBaseUrl()).href;
+      }
+      return widget;
+    });
+  };
+}
+
+/**
+ * Install the server-proxy patch on one command registry: wrap
+ * `commands.execute` for the reload argument, fetch the server-proxy
+ * configuration, cache one icon per non-kernel launcher entry and wrap
+ * `commands.icon`.
+ *
+ * @param commands - The command registry whose `execute` and `icon` methods
+ * are wrapped
  * @param loadServersInfo - Fetches the server-proxy configuration; defaults to
  * {@link fetchServersInfo}
  * @returns `true` when the patch was installed, `false` when the registry
@@ -105,6 +142,7 @@ export async function installServerProxyLauncherFix(
     return false;
   }
   commands[PATCH_MARKER] = true;
+  wrapCommandsExecute(commands);
 
   const serversInfo = await loadServersInfo();
   await cacheLauncherIcons(serversInfo.server_processes || []);

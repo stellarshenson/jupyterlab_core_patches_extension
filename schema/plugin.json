@@ -59,8 +59,8 @@
     },
     "jupyterlab_server_proxy_launcher_fix": {
       "type": "boolean",
-      "title": "Server proxy launcher icons",
-      "description": "Render SVG icons of server-proxy launchers in custom categories.",
+      "title": "Server proxy launcher icons and reload",
+      "description": "Render SVG icons of server-proxy launchers in custom categories, and make server-proxy:open with reload load the new URL in the tab that is already open.",
       "default": true
     },
     "jupyterlab_terminal_cpr_escape_fix": {

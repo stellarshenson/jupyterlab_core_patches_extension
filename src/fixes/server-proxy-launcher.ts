@@ -20,7 +20,7 @@ const SWITCH_KEY = 'jupyterlab_server_proxy_launcher_fix';
 const plugin: JupyterFrontEndPlugin<void> = {
   id: '@stellarshenson/jupyterlab-core-patches-extension:server-proxy-launcher',
   description:
-    'Render SVG icons of jupyter-server-proxy launchers in custom launcher categories',
+    'Render SVG icons of jupyter-server-proxy launchers in custom launcher categories, and make server-proxy:open with reload load the new URL in the tab that is already open',
   autoStart: true,
   optional: [ISettingRegistry],
   activate: async (

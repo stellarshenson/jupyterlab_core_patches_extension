@@ -2,6 +2,16 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.39] - 2026-11-22
+
+### Added
+
+- A `reload` argument for `server-proxy:open`: with `reload: true` and the `id` of a tab already open, the tab's frame loads the new `url`, resolved against the base URL, and the tab is activated; one tab stays open and the lab page does not reload. A call without `reload`, a call for a tab that is not open, and every call with the `jupyterlab_server_proxy_launcher_fix` switch off run stock `server-proxy:open` unchanged
+
+### Changed
+
+- The `jupyterlab_server_proxy_launcher_fix` switch title and description, and the plugin description, name both the launcher icons and the reload argument; `docs/server-proxy-launcher.md` and the README row describe the reload argument, the wrapped `commands.execute` method and the open-tab lookup by `id`
+
 ## [1.0.38] - 2026-11-18
 
 ### Added

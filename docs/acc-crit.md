@@ -417,3 +417,22 @@ One settings switch per patch; false returns before patching; all default true.
   - log: 2026-11-18T17:56:16Z @kj added
   - log: 2026-11-18T18:11:58Z @kj edited test "pytest test_docs.py: the docs page names the trash-put CLI and the README links the page" -> "pytest jupyterlab_core_patches_extension/tests/test_trash_cli.py::test_docs_page_names_the_cli and ::test_readme_mentions_the_cli"
   - log: 2026-11-18T19:02:19Z @kj closed: closed: review wf_556a0bc9-cf9 round 3 SHIP
+- [x] `ACC-PATCH-61-RELOAD-OPEN` **Open with reload reloads the open tab** - HIGH; server-proxy:open with reload true and the id of an open tab loads the given url in that tab's frame and activates it; no second tab opens and the lab page does not reload; a tab not open opens as stock
+  - evidence: Galata ui-tests/tests/server-proxy-launcher.spec.ts 'ACC-PATCH-61-RELOAD-OPEN' passed in the full suite 26/26 on the 1.0.38 make build (tmp/workflows/reload-v1/galata-full-2.log); Jest src/__tests__/server-proxy-launcher.spec.ts 'ACC-PATCH-61-RELOAD-OPEN' passed in make test 141/141 (tmp/workflows/reload-v1/make-test-finish.log)
+  - test: Galata: open a /proxy/<port>/ page through server-proxy:open, mark the frame and the lab window, run it again with the same id, a new url and reload true; one tab, frame on the new url, frame marker gone, window marker kept
+  - test-tags: FUNCTIONAL, UNIT
+  - log: 2026-11-21T21:31:50Z @kj added
+  - log: 2026-11-21T22:15:19Z @kj closed
+  - log: 2026-11-21T22:15:32Z @kj edited evidence "Galata ui-tests/tests/server-proxy-launcher.spec.ts 'ACC-PATCH-61-RELOAD-OPEN' passed in the full suite 26/26 on the 1.0.38 make build (tmp/workflows/reload-v1/galata-full-2.log); Jest src/__tests__/server-proxy-launcher.spec.ts ACC-PATCH-61 test passed in make test 141/141 (tmp/workflows/reload-v1/make-test-finish.log)" -> "Galata ui-tests/tests/server-proxy-launcher.spec.ts 'ACC-PATCH-61-RELOAD-OPEN' passed in the full suite 26/26 on the 1.0.38 make build (tmp/workflows/reload-v1/galata-full-2.log); Jest src/__tests__/server-proxy-launcher.spec.ts 'ACC-PATCH-61-RELOAD-OPEN' passed in make test 141/141 (tmp/workflows/reload-v1/make-test-finish.log)"
+- [x] `ACC-PATCH-62-RELOAD-STOCK` **Open without reload only focuses** - MEDIUM; without reload, server-proxy:open on an open tab only activates it, as stock; with jupyterlab_server_proxy_launcher_fix false the reload argument does nothing
+  - evidence: Jest src/__tests__/server-proxy-launcher.spec.ts tests 'a call without reload reaches stock execute and leaves the frame url' and 'with the switch off the reload argument does nothing' passed in make test 141/141 (tmp/workflows/reload-v1/make-test-finish.log)
+  - test: Jest: a call without reload reaches stock execute and leaves the frame src; switch off installs no wrapper
+  - test-tags: UNIT
+  - log: 2026-11-21T21:31:50Z @kj added
+  - log: 2026-11-21T22:15:19Z @kj closed
+- [x] `ACC-PATCH-63-RELOAD-DOCS` **Reload argument documented** - LOW; docs/server-proxy-launcher.md and README state the reload argument of server-proxy:open, its effect on an open tab and the switch that carries it
+  - evidence: read docs/server-proxy-launcher.md (opening paragraph, Reload argument and Without reload bullets, Switch jupyterlab_server_proxy_launcher_fix) and README Server proxy launcher row: both state the reload argument, its effect on an open tab and the switch
+  - test: read docs/server-proxy-launcher.md and README for the reload argument
+  - test-tags: MANUAL
+  - log: 2026-11-21T21:31:50Z @kj added
+  - log: 2026-11-21T22:15:19Z @kj closed
