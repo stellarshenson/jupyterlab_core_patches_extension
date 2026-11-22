@@ -1,4 +1,4 @@
-import { PageConfig } from '@jupyterlab/coreutils';
+import { ServerConnection } from '@jupyterlab/services';
 
 import { LabIcon } from '@jupyterlab/ui-components';
 
@@ -93,12 +93,18 @@ function wrapCommandsIcon(commands: any): void {
  * `args.url` in the tab that already shows `args.id`.
  *
  * Stock execute still validates the URL and activates the tab; the wrapper
- * then sets the frame URL, resolved against the base URL as stock resolves it.
- * A call without `reload`, or for a tab that is not open, is stock.
+ * then sets the frame URL, resolved against `settings.baseUrl` as stock
+ * resolves it. A call without `reload`, or for a tab that is not open, is
+ * stock.
  *
  * @param commands - The command registry to patch
+ * @param settings - The server connection settings whose `baseUrl` resolves
+ * `args.url`
  */
-function wrapCommandsExecute(commands: any): void {
+function wrapCommandsExecute(
+  commands: any,
+  settings: ServerConnection.ISettings
+): void {
   const originalExecute = commands.execute.bind(commands);
   commands.execute = (id: string, args: any = {}) => {
     // Looked up before stock execute, so a tab this call opens is not loaded
@@ -114,7 +120,7 @@ function wrapCommandsExecute(commands: any): void {
     return result.then((widget: any) => {
       // Stock opens a browser tab for `newBrowserTab` and returns no widget.
       if (widget) {
-        widget.content.url = new URL(args.url, PageConfig.getBaseUrl()).href;
+        widget.content.url = new URL(args.url, settings.baseUrl).href;
       }
       return widget;
     });
@@ -142,7 +148,7 @@ export async function installServerProxyLauncherFix(
     return false;
   }
   commands[PATCH_MARKER] = true;
-  wrapCommandsExecute(commands);
+  wrapCommandsExecute(commands, ServerConnection.makeSettings());
 
   const serversInfo = await loadServersInfo();
   await cacheLauncherIcons(serversInfo.server_processes || []);

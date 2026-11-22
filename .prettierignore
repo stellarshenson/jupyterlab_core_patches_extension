@@ -1,6 +1,7 @@
 node_modules
 **/node_modules
 **/lib
+graphify-out
 **/package.json
 !/package.json
 jupyterlab_core_patches_extension

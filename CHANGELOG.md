@@ -2,6 +2,13 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.44] - 2026-11-22
+
+### Changed
+
+- The server-proxy-launcher reload wrapper resolves `args.url` against one `ServerConnection.ISettings` stored at install and read as `settings.baseUrl` at each call, instead of `PageConfig.getBaseUrl`, which removes the `jupyter/no-pageconfig-base-url` lint warning; the resolved URL is unchanged
+- `.prettierignore` ignores the generated `graphify-out` directory, so the release lint checks source files only
+
 ## [1.0.42] - 2026-11-22
 
 ### Added
