@@ -66,7 +66,7 @@
     "jupyterlab_terminal_cpr_escape_fix": {
       "type": "boolean",
       "title": "Terminal CPR escape",
-      "description": "Filter CPR escape text from idle terminal output, and reconnect a terminal that lost its connection when the page is shown, the network returns or the user types.",
+      "description": "Filter CPR escape text from idle terminal output, reconnect a terminal that lost its connection when the page is shown, the network returns or the user types, and repaint a shown or reconnected terminal at its fitted size.",
       "default": true
     },
     "jupyterlab_web_switch_tab_scrolling_fix": {

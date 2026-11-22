@@ -436,3 +436,26 @@ One settings switch per patch; false returns before patching; all default true.
   - test-tags: MANUAL
   - log: 2026-11-21T21:31:50Z @kj added
   - log: 2026-11-21T22:15:19Z @kj closed
+- [x] `ACC-PATCH-64-RESIZE-SWITCH` **Resize when a terminal is shown** - HIGH; switching to a terminal tab sends a size step to the session so a terminal drawn at the wrong size repaints at its fitted size; the step goes one column narrower and back
+  - evidence: Jest test for the show step and the connecting-hold case pass; make test 147 Jest, 238 pytest, auth gate; Galata 26/26; review round 2 SHIP
+  - related: ACC-PATCH-65-RESIZE-RECONNECT - same size step, different trigger
+  - test: Jest: show a terminal whose xterm is open, assert the session sends set_size at cols - 1 and again at cols
+  - test-tags: UNIT
+  - log: 2026-11-22T20:05:30Z @kj added
+  - log: 2026-11-22T21:46:09Z @kj closed: implemented and verified
+  - log: 2026-11-22T21:46:21Z @kj edited evidence "Jest 'steps the fitted size when an open terminal is shown (ACC-PATCH-64)' and the connecting-hold case pass; make test 147 Jest, 238 pytest, auth gate; Galata 26/26; review round 2 SHIP" -> "Jest test for the show step and the connecting-hold case pass; make test 147 Jest, 238 pytest, auth gate; Galata 26/26; review round 2 SHIP"
+- [x] `ACC-PATCH-65-RESIZE-RECONNECT` **Resize after a reconnect** - HIGH; a terminal that reconnects after its websocket dropped sends a size step when the connection opens, so the reattached terminal repaints at its fitted size
+  - evidence: Jest test for the reconnect step passes; make test 147 Jest, 238 pytest, auth gate; Galata 26/26; review round 2 SHIP
+  - related: ACC-PATCH-64-RESIZE-SWITCH - same size step, different trigger
+  - test: Jest: drop a tracked terminal's websocket, run the reconnect, assert the session sends a set_size step when the socket opens
+  - test-tags: UNIT
+  - log: 2026-11-22T20:05:30Z @kj added
+  - log: 2026-11-22T21:46:09Z @kj closed: implemented and verified
+  - log: 2026-11-22T21:46:21Z @kj edited evidence "Jest 'steps the fitted size when the connection opens after a drop (ACC-PATCH-65)' passes; make test 147 Jest, 238 pytest, auth gate; Galata 26/26; review round 2 SHIP" -> "Jest test for the reconnect step passes; make test 147 Jest, 238 pytest, auth gate; Galata 26/26; review round 2 SHIP"
+- [x] `ACC-PATCH-66-TEST-SEAM` **Only the registration path reaches the terminal wrapper** - MEDIUM; terminal-session.ts exports holdUntilOpened and reconnectOnTyping only for tests; production reaches wrapSend through registerCprEscape and widgetAdded; both exports and the private typing flag are deleted, and the hold and typing tests drive the registration path
+  - evidence: the hold and typing cases fire widgetAdded through the plugin; grep finds no import of the removed names; both mutations failed their cases; Jest 143 passed, 12 suites
+  - related: ACC-PATCH-54-TERM-KEPT - the refactor whose import-path limit kept this seam
+  - test: Jest: the hold and typing cases fire widgetAdded through the plugin; grep finds no import of holdUntilOpened or reconnectOnTyping
+  - test-tags: UNIT
+  - log: 2026-11-22T21:52:57Z @kj added
+  - log: 2026-11-22T22:00:59Z @kj closed: implemented and verified

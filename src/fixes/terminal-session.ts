@@ -86,9 +86,9 @@ interface IParts {
 const trackers = new WeakMap<ITerminalTracker, IParts>();
 
 /**
- * Sessions that carry the one `send` wrapper, or carried it until the hold
- * released. A second call for the same session returns before it wraps
- * `send` again, so one message never runs two wrappers.
+ * Sessions that carry the one `send` wrapper. A second call for the same
+ * session returns before it wraps `send` again, so one message never runs
+ * two wrappers.
  */
 const wrappedSessions = new WeakSet<Terminal.ITerminalConnection>();
 
@@ -126,11 +126,12 @@ function reconnectIfGivenUp(session: Terminal.ITerminalConnection): void {
 /**
  * Install the one `send` wrapper of a terminal session.
  *
- * The wrapper carries the typing reconnect and the size hold. With `typing`,
- * a `stdin` message runs `reconnectIfGivenUp`, then goes on, and the original
- * `send` queues it until the connection opens. With `hold`, the wrapper keeps
- * a terminal whose xterm is not opened yet from reporting its size, then
- * steps the PTY once so the running program repaints at the fitted size.
+ * The wrapper carries the typing reconnect, the size hold and the repaint
+ * step on a show or a reconnect. A `stdin` message runs `reconnectIfGivenUp`,
+ * then goes on, and the original `send` queues it until the connection opens.
+ * With `hold`, the wrapper also keeps a terminal whose xterm is not opened yet
+ * from reporting its size, then steps the PTY once so the running program
+ * repaints at the fitted size.
  *
  * JupyterLab opens and fits the xterm only when the terminal's tab is visible.
  * Until then the xterm is 80x24: the widget reports that size to the server
@@ -141,19 +142,22 @@ function reconnectIfGivenUp(session: Terminal.ITerminalConnection): void {
  * already has the fitted size, so the fitted size alone sends no SIGWINCH and
  * the program never repaints. The hold releases at the first append of the
  * xterm element or at the disposal of the terminal; the wrapper then passes
- * every message on, and without `typing` it puts the original `send` back.
+ * every message on.
  *
- * A second call for the same session returns at once. A call with nothing to
- * install, no `typing` and no hold or a terminal already opened, wraps
- * nothing.
+ * The wrapper records the content of every `set_size` it forwards. With
+ * `hold`, it also steps when the terminal is shown or when the connection
+ * opens after a drop: a show asks the widget to refit and steps the size the
+ * widget sends next, and a connection that opens after a drop steps the last
+ * recorded size. Both triggers are installed for the session's life and
+ * removed at the terminal's disposal.
+ *
+ * A second call for the same session returns at once.
  *
  * @param session - The terminal session
- * @param typing - True: typed input into a given-up session starts a reconnect
  * @param hold - The size hold; absent for no hold
  */
 function wrapSend(
   session: Terminal.ITerminalConnection,
-  typing: boolean,
   hold?: ISizeHold
 ): void {
   if (wrappedSessions.has(session)) {
@@ -163,53 +167,52 @@ function wrapSend(
    * The hold while the xterm is not opened; null once it released.
    */
   let held = hold && !isOpened(hold.terminal) ? hold : null;
-  if (!held && !typing) {
-    return;
-  }
   wrappedSessions.add(session);
 
   const send = session.send;
 
   /**
-   * True once the first fitted size has been followed by a repaint step.
+   * The content of the last `set_size` the wrapper forwarded.
    */
-  let stepped = false;
+  let recorded: number[] | null = null;
+  /**
+   * True between a show of the terminal and the next forwarded `set_size`.
+   */
+  let arm = false;
 
-  session.send = (message: Terminal.IMessage) => {
-    if (typing && message.type === 'stdin') {
-      reconnectIfGivenUp(session);
-    }
-    if (!held) {
-      send.call(session, message);
-      return;
-    }
-    const { terminal, isEnabled, isRestored } = held;
-    // Opened is read at call time: the widget sends the fitted size right
-    // after it opens the xterm, before the observer runs.
-    if (message.type === 'set_size' && !isOpened(terminal) && isEnabled()) {
-      return;
-    }
-    send.call(session, message);
+  /**
+   * Step the PTY one column narrower and back after `BOUNCE_STEP`, so the
+   * program repaints at `size`. No step while the hold is active: the hold
+   * owns the first show.
+   */
+  const step = (size: number[] | null, requireConnected = true) => {
     if (
-      message.type !== 'set_size' ||
-      !message.content ||
-      stepped ||
-      !isEnabled() ||
-      !isRestored()
+      !size ||
+      size[0] <= 0 ||
+      size[1] <= 0 ||
+      !hold ||
+      !hold.isEnabled() ||
+      hold.terminal.isDisposed ||
+      !isOpened(hold.terminal) ||
+      (requireConnected && session.connectionStatus !== 'connected') ||
+      held !== null
     ) {
       return;
     }
-    stepped = true;
-    const [rows, cols, height, width] = message.content as number[];
+    const [rows, cols, height, width] = size;
     // terminado resizes the PTY only when the size differs, so the fitted
-    // size alone leaves a restored terminal without SIGWINCH. Step one column
+    // size alone leaves a terminal without SIGWINCH. Step one column
     // narrower and back so the program repaints at the fitted size.
     send.call(session, {
       type: 'set_size',
       content: [rows, cols - 1, height, width]
     });
     setTimeout(() => {
-      if (!terminal.isDisposed) {
+      // A restore after a second drop waits for the next socket.
+      if (
+        !hold.terminal.isDisposed &&
+        (!requireConnected || session.connectionStatus === 'connected')
+      ) {
         send.call(session, {
           type: 'set_size',
           content: [rows, cols, height, width]
@@ -218,19 +221,90 @@ function wrapSend(
     }, BOUNCE_STEP);
   };
 
+  session.send = (message: Terminal.IMessage) => {
+    if (message.type === 'stdin') {
+      reconnectIfGivenUp(session);
+    }
+    // Opened is read at call time: the widget sends the fitted size right
+    // after it opens the xterm, before the observer runs.
+    if (
+      held &&
+      message.type === 'set_size' &&
+      !isOpened(held.terminal) &&
+      held.isEnabled()
+    ) {
+      return;
+    }
+    send.call(session, message);
+    if (message.type === 'set_size' && message.content) {
+      const content = message.content as number[];
+      recorded = content;
+      if (arm) {
+        arm = false;
+        step(content);
+      }
+    }
+    if (!held) {
+      return;
+    }
+    const { isEnabled, isRestored } = held;
+    if (
+      message.type !== 'set_size' ||
+      !message.content ||
+      !isEnabled() ||
+      !isRestored()
+    ) {
+      return;
+    }
+    // Release first: step() does nothing while the hold is active.
+    release();
+    step(recorded, false);
+  };
+
+  if (!hold) {
+    return;
+  }
+  const terminal = hold.terminal;
+  const processMessage = terminal.processMessage;
+  /**
+   * Refit at a show, then step the size the widget sends next.
+   */
+  terminal.processMessage = msg => {
+    processMessage.call(terminal, msg);
+    if (msg.type === 'after-show' && hold.isEnabled()) {
+      terminal.fit();
+      arm = true;
+    }
+  };
+  /**
+   * True once the session has reported a connection, so the first connection
+   * of a session is not stepped.
+   */
+  let hadConnected = session.connectionStatus === 'connected';
+  const onStatus = (_: unknown, status: Terminal.ConnectionStatus) => {
+    if (status !== 'connected') {
+      return;
+    }
+    if (hadConnected) {
+      step(recorded);
+    } else {
+      hadConnected = true;
+    }
+  };
+  session.connectionStatusChanged.connect(onStatus);
+  terminal.disposed.connect(() => {
+    session.connectionStatusChanged.disconnect(onStatus);
+    terminal.processMessage = processMessage;
+  });
+
   if (!held) {
     return;
   }
-  const { terminal } = held;
   /**
-   * End the hold, disconnect the observer, and put the original `send` back
-   * when the wrapper has no typing reconnect to keep.
+   * End the hold and disconnect the observer.
    */
   const release = () => {
     held = null;
-    if (!typing) {
-      session.send = send;
-    }
     terminal.disposed.disconnect(release);
     observer.disconnect();
   };
@@ -244,39 +318,6 @@ function wrapSend(
   });
   terminal.disposed.connect(release);
   observer.observe(terminal.node, { childList: true });
-}
-
-/**
- * Keep a terminal whose xterm is not opened yet from reporting its size, then
- * step the PTY once so the running program repaints at the fitted size.
- *
- * Installs the session's one `send` wrapper with the size hold and without
- * the typing reconnect; the original `send` is put back at the release.
- *
- * @param terminal - The terminal widget
- * @param isEnabled - Read at each decision; false leaves the terminal to
- * JupyterLab
- * @param isRestored - Read at the first fitted size; false sends that size
- * without the step, for a session the page started new
- */
-export function holdUntilOpened(
-  terminal: ITerminal.ITerminal,
-  isEnabled: () => boolean,
-  isRestored: () => boolean = () => true
-): void {
-  wrapSend(terminal.session, false, { terminal, isEnabled, isRestored });
-}
-
-/**
- * Make typed input into a given-up terminal start a reconnect.
- *
- * Installs the session's one `send` wrapper with the typing reconnect and
- * without the size hold.
- *
- * @param session - The terminal session of a tracked terminal widget
- */
-export function reconnectOnTyping(session: Terminal.ITerminalConnection): void {
-  wrapSend(session, true);
 }
 
 /**
@@ -298,7 +339,7 @@ function partsOf(tracker: ITerminalTracker): IParts {
     const { cprEscape, restore } = parts;
     if (cprEscape) {
       const name = widget.content.session.name;
-      wrapSend(widget.content.session, true, {
+      wrapSend(widget.content.session, {
         terminal: widget.content,
         isEnabled: cprEscape.isEnabled,
         isRestored: () => cprEscape.isRestored(name)

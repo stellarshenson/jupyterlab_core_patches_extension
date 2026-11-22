@@ -43,7 +43,7 @@ const REDRAW_OPTION = 'redrawBackgroundTerminals';
 const plugin: JupyterFrontEndPlugin<void> = {
   id: '@stellarshenson/jupyterlab-core-patches-extension:terminal-cpr-escape',
   description:
-    'Fix CPR escape sequences in idle terminal reconnections, redraw background terminals at their real size when first shown, and reconnect a terminal that lost its connection when the page is shown, the network returns or the user types',
+    'Fix CPR escape sequences in idle terminal reconnections, redraw background terminals at their real size when first shown, reconnect a terminal that lost its connection when the page is shown, the network returns or the user types, and repaint a shown or reconnected terminal at its fitted size',
   autoStart: true,
   optional: [ITerminalTracker, ISettingRegistry],
   activate: async (

@@ -92,6 +92,7 @@ function fakeTerminal(name = '1') {
     connectionStatus: 'disconnected',
     isDisposed: false
   };
+  session.connectionStatusChanged = new Signal<any, string>(session);
   let current: unknown = send;
   let wraps = 0;
   Object.defineProperty(session, 'send', {
@@ -106,7 +107,12 @@ function fakeTerminal(name = '1') {
     return Promise.resolve();
   });
   session.reconnect = reconnect;
-  const terminal: any = { node: document.createElement('div'), session };
+  const terminal: any = {
+    node: document.createElement('div'),
+    session,
+    fit: jest.fn(),
+    processMessage: jest.fn()
+  };
   terminal.disposed = new Signal<any, void>(terminal);
   return { terminal, send, reconnect, wraps: () => wraps };
 }

@@ -2,6 +2,16 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.42] - 2026-11-22
+
+### Added
+
+- A tracked terminal repaints at its fitted size when its tab is shown and when its websocket reconnects after a drop: a show posts `terminal.fit()` and the next forwarded `set_size` is stepped one column narrower and back, a reconnect steps the last recorded size, the first connection of a session is not stepped, and the hold's first-show writes stay unfiltered so a session still connecting queues them
+
+### Changed
+
+- The terminal-session module drops the test-only exports `holdUntilOpened` and `reconnectOnTyping` and the private `typing` flag; the hold, stdin, already-open and typing Jest cases drive the plugin's `widgetAdded` path, so only the registration path reaches the wrapper; the terminal doc's Members table loses the two rows
+
 ## [1.0.39] - 2026-11-22
 
 ### Added
